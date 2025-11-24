@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Paper Weather Dashboard SVG</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: #fff;
+        }
+        .container {
+            width: 800px;
+            height: 480px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: white;
+            padding: 0;
+            line-height: 0; /* Removes gaps below SVG */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- START OF SVG CODE -->
+        <svg width="800" height="480" viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" id="epaper-display">
+            <defs>
+                <style>
+                    /* Global Font Styles to match the retro pixel look */
+                    .font-pixel { font-family: 'Courier New', monospace; font-weight: bold; text-transform: uppercase; }
+                    
+                    /* Colors */
+                    .fill-black { fill: #000000; }
+                    .fill-white { fill: #FFFFFF; }
+                    .fill-yellow { fill: #FFD700; }
+                    .stroke-yellow { stroke: #FFD700; stroke-width: 3; }
+                    .stroke-black { stroke: #000000; stroke-width: 3; }
+                </style>
+            </defs>
+
+            <!-- 1. HEADER SECTION -->
+            <rect x="0" y="0" width="800" height="50" class="fill-black" />
+            <text id="header-text" x="400" y="32" text-anchor="middle" class="font-pixel fill-yellow" font-size="24">WEATHER & AQI | <tspan id="current-date">NOV 24, 2025</tspan> | HANOI, VN</text>
+
+            <!-- 2. MAIN WEATHER HERO SECTION -->
+            <rect x="0" y="50" width="800" height="180" class="fill-white" />
+            
+            <!-- Weather Icon -->
+            <image id="weather-icon" x="50" y="70" width="100" height="100" href="https://openweathermap.org/img/wn/10d@2x.png"/>
+
+            <!-- Temperature -->
+            <text id="temp-main" x="400" y="130" text-anchor="middle" class="font-pixel fill-black" font-size="90">--°C</text>
+            <text id="condition-main" x="400" y="170" text-anchor="middle" class="font-pixel fill-black" font-size="32">--</text>
+
+            <!-- AQI Gauge Area -->
+            <g id="aqi-gauge" transform="translate(650, 130)">
+                <!-- Gauge Arc Background -->
+                <path d="M-60 0 A 60 60 0 0 1 60 0" fill="none" stroke="#ccc" stroke-width="20" stroke-linecap="round" opacity="1"/>
+                
+                <!-- Gauge Active Arc -->
+                <path id="aqi-arc-active" d="M-60 0 A 60 60 0 0 1 60 0" fill="none" stroke="#FFD700" stroke-width="20" stroke-linecap="round" stroke-dasharray="188 188" opacity="0.8"/>
+                
+                <!-- Needle -->
+                <g id="aqi-needle-group" transform="rotate(0)">
+                    <line x1="0" y1="0" x2="50" y2="0" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+                    <circle cx="0" cy="0" r="6" fill="#000"/>
+                </g>
+                
+                <!-- AQI Text and Status -->
+                <text id="aqi-label" x="0" y="45" text-anchor="middle" class="font-pixel fill-black" font-size="28" font-weight="bold">--</text>
+                <text id="aqi-status" x="0" y="65" text-anchor="middle" class="font-pixel fill-black" font-size="14">--</text>
+            </g>
+
+            <!-- 3. ACTION BANNER -->
+            <g transform="translate(20, 200)">
+                <rect x="0" y="0" width="760" height="50" rx="10" ry="10" fill="white" class="stroke-yellow" stroke-width="4"/>
+                <text id="action-text" x="380" y="32" text-anchor="middle" class="font-pixel fill-black" font-size="20">ACTION SUGGESTED: BRING UMBRELLA ☂ | WEAR MASK 😷</text>
+            </g>
+
+            <!-- 4. DETAILS GRID (Data Table) -->
+            <rect x="0" y="270" width="800" height="60" class="fill-black" />
+            
+            <!-- Row 1 -->
+            <text x="20" y="295" class="font-pixel fill-yellow" font-size="18">FEELS LIKE: <tspan id="feels-like" class="fill-white">--°C</tspan></text>
+            <text x="280" y="295" class="font-pixel fill-yellow" font-size="18">HUMIDITY: <tspan id="humidity" class="fill-white">--%</tspan></text>
+            <text x="540" y="295" class="font-pixel fill-yellow" font-size="18">PM2.5: <tspan id="pm25" class="fill-white">-- µg/m³</tspan></text>
+
+            <!-- 5. QUOTE SECTION -->
+            <g transform="translate(20, 340)">
+                <rect x="0" y="0" width="760" height="60" rx="5" ry="5" fill="white" class="stroke-yellow" stroke-width="3"/>
+                <text id="quote-label" x="10" y="25" class="font-pixel fill-black" font-size="16">QUOTE:</text>
+                <!-- Broken into tspans for simple wrapping -->
+                <text x="80" y="25" class="font-pixel fill-black" font-size="16">
+                    <tspan id="quote-line-1">“IN EVERY WALK WITH NATURE ONE RECEIVES</tspan>
+                    <tspan id="quote-line-2" x="80" dy="20">FAR MORE THAN HE SEEKS.” – JOHN MUIR</tspan>
+                </text>
+            </g>
+
+            <!-- 6. FOOTER -->
+            <rect x="0" y="460" width="800" height="20" class="fill-black" />
+            <text id="last-updated" x="790" y="475" text-anchor="end" class="font-pixel fill-yellow" font-size="12">UPDATED 11:15 AM</text>
+            <text x="10" y="475" text-anchor="start" class="font-pixel fill-yellow" font-size="12">E-INK DAILY BRIEF</text>
+
+        </svg>
+        <!-- END OF SVG CODE -->
+    </div>
+
+    <script>
+        function updateCurrentDate() {
+            const now = new Date();
+            const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+            const month = months[now.getMonth()];
+            const day = now.getDate();
+            const year = now.getFullYear();
+            document.getElementById('current-date').textContent = `${month} ${day}, ${year}`;
+        }
+
+        async function loadEnvApiKey() {
+            try {
+                const module = await import('./env-config.js');
+                const key = module.OPENWEATHER_API_KEY ?? module.default ?? '';
+                return key;
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function getAQIStatus(pm25) {
+            if (pm25 <= 12) return { status: 'GOOD', color: '#00E400' };
+            if (pm25 <= 35.4) return { status: 'MODERATE', color: '#FFFF00' };
+            if (pm25 <= 55.4) return { status: 'UNHEALTHY (SG)', color: '#FF7E00' };
+            if (pm25 <= 150.4) return { status: 'UNHEALTHY', color: '#FF0000' };
+            if (pm25 <= 250.4) return { status: 'VERY UNHEALTHY', color: '#8F3F97' };
+            return { status: 'HAZARDOUS', color: '#7E0023' };
+        }
+
+        function updateAQIGauge(pm25) {
+            const maxPM25 = 360;
+            const normalizedValue = Math.min(pm25 / maxPM25, 1);
+            
+            // Arc length: semicircle is ~188 units, so fill proportionally
+            const arcLength = 188 * normalizedValue;
+            
+            // Rotation: starts at -90° (left), ends at +90° (right), total range is 180°
+            // Like a clock: -90° is 9 o'clock, 0° is 12 o'clock, +90° is 3 o'clock
+            const rotation = -170 + (normalizedValue * 180);
+            
+            const aqiInfo = getAQIStatus(pm25);
+
+            // Update arc
+            document.getElementById('aqi-arc-active').setAttribute('stroke-dasharray', `${arcLength} 188`);
+            document.getElementById('aqi-arc-active').setAttribute('stroke', aqiInfo.color);
+
+            // Update needle
+            document.getElementById('aqi-needle-group').setAttribute('transform', `rotate(${rotation})`);
+
+            // Update text
+            document.getElementById('aqi-label').textContent = Math.round(pm25);
+            document.getElementById('aqi-status').textContent = aqiInfo.status;
+        }
+        // Cache management
+        const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+        const WEATHER_CACHE_KEY = 'weather_cache';
+        const AQI_CACHE_KEY = 'aqi_cache';
+
+        function getCachedData(key) {
+            try {
+                const cached = localStorage.getItem(key);
+                if (!cached) return null;
+                
+                const { data, timestamp } = JSON.parse(cached);
+                const now = Date.now();
+                
+                // Check if cache is still valid (within 30 minutes)
+                if (now - timestamp < CACHE_DURATION) {
+                    console.log(`Using cached data for ${key} (${Math.round((now - timestamp) / 60000)} minutes old)`);
+                    return data;
+                }
+                
+                // Cache expired, remove it
+                localStorage.removeItem(key);
+                return null;
+            } catch (error) {
+                console.error('Error reading cache:', error);
+                return null;
+            }
+        }
+
+        function setCachedData(key, data) {
+            try {
+                const cacheEntry = {
+                    data: data,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(key, JSON.stringify(cacheEntry));
+            } catch (error) {
+                console.error('Error setting cache:', error);
+            }
+        }
+
+        async function fetchWeatherData(key) {
+            const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=21.0285&lon=105.8542&appid=${key}&units=metric`);
+            const data = await response.json();
+            setCachedData(WEATHER_CACHE_KEY, data);
+            console.log('Fetched fresh weather data');
+            return data;
+        }
+
+        async function fetchAQIData(key) {
+            const response = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=21.0285&lon=105.8542&appid=${key}`);
+            const data = await response.json();
+            setCachedData(AQI_CACHE_KEY, data);
+            console.log('Fetched fresh AQI data');
+            return data;
+        }
+
+        async function updateWeather() {
+            const key = await loadEnvApiKey();
+            if (!key) return;
+            try {
+                // Try to get cached weather data first
+                let data = getCachedData(WEATHER_CACHE_KEY);
+                if (!data) {
+                    data = await fetchWeatherData(key);
+                }
+                
+                // Weather info
+                const icon = data.weather[0].icon;
+                const description = data.weather[0].description.toUpperCase();
+                const temp = Math.round(data.main.temp);
+                const feelsLike = Math.round(data.main.feels_like);
+                
+                // Other data
+                const humidity = data.main.humidity;
+                
+                // Update DOM
+                document.getElementById('weather-icon').setAttribute('href', `https://openweathermap.org/img/wn/${icon}@2x.png`);
+                document.getElementById('condition-main').textContent = description;
+                document.getElementById('temp-main').textContent = `${temp}°C`;
+                document.getElementById('feels-like').textContent = `${feelsLike}°C`;
+                document.getElementById('humidity').textContent = `${humidity}%`;
+                
+                // Try to get cached AQI data first
+                let aqiData = getCachedData(AQI_CACHE_KEY);
+                if (!aqiData) {
+                    aqiData = await fetchAQIData(key);
+                }
+                const pm25 = Math.round(aqiData.list[0].components.pm2_5);
+                
+                // Use PM2.5 as AQI value
+                updateAQIGauge(pm25);
+                document.getElementById('pm25').textContent = `${pm25} µg/m³`;
+                
+                // Update last updated time
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+                document.getElementById('last-updated').textContent = `UPDATED ${hours}:${minutes} ${ampm}`;
+                
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        updateCurrentDate();
+        updateWeather();
+    </script>
+
+</body>
+</html>
+
