@@ -5,9 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Paper Weather Dashboard SVG</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&display=swap');
+        :root {
+            --yellow: #ffc800;
+            --black: #000000;
+            --gray: #f7f7f7;
+            --border: #e6e6e6;
+        }
         body {
-            font-family: sans-serif;
-            background-color: #333;
+            font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--gray);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,10 +26,13 @@
         .container {
             width: 800px;
             height: 480px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 14px 32px rgba(0,0,0,0.16);
+            border: 1px solid var(--border);
+            border-radius: 6px;
             background: white;
             padding: 0;
             line-height: 0; /* Removes gaps below SVG */
+            overflow: hidden;
         }
     </style>
 </head>
@@ -33,86 +43,270 @@
         <svg width="800" height="480" viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" id="epaper-display">
             <defs>
                 <style>
-                    /* Global Font Styles to match the retro pixel look */
-                    .font-pixel { font-family: 'Courier New', monospace; font-weight: bold; text-transform: uppercase; }
-                    
-                    /* Colors */
+                    .font-strong { font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .font-body { font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }
                     .fill-black { fill: #000000; }
                     .fill-white { fill: #FFFFFF; }
-                    .fill-yellow { fill: #FFD700; }
-                    .stroke-yellow { stroke: #FFD700; stroke-width: 3; }
+                    .fill-yellow { fill: #ffc800; }
+                    .fill-muted { fill: #555555; }
+                    .stroke-yellow { stroke: #ffc800; stroke-width: 3; }
                     .stroke-black { stroke: #000000; stroke-width: 3; }
                 </style>
+                <!-- Small stat icons -->
+                <symbol id="icon-drop" viewBox="0 0 24 24">
+                    <path d="M12 2S5 11 5 15a7 7 0 0 0 14 0C19 11 12 2 12 2Z" fill="currentColor"/>
+                </symbol>
+                <symbol id="icon-thermo" viewBox="0 0 24 24">
+                    <path d="M14 5a2 2 0 1 0-4 0v7.5a4 4 0 1 0 4 0Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <circle cx="12" cy="16" r="2.5" fill="currentColor"/>
+                    <line x1="12" y1="5" x2="12" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </symbol>
+                <symbol id="icon-wind" viewBox="0 0 24 24">
+                    <path d="M4 9h11a3 3 0 1 0-3-3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path d="M4 15h13a2 2 0 1 1-2 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                </symbol>
+                <symbol id="icon-storm" viewBox="0 0 80 80">
+                    <path d="M22 48c-8 0-14-6-14-14 0-7 6-12 12-12 2-12 10-18 22-18 12 0 20 7 22 16 6 0 12 5 12 12 0 8-6 14-14 14H22Z" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M40 36h12l-10 14h12L38 68l6-16H32l8-16Z" fill="#ffc800" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+                    <circle cx="20" cy="24" r="3" fill="#000"/>
+                </symbol>
+                <symbol id="icon-cloud" viewBox="0 0 80 80">
+                    <path d="M22 48c-8 0-14-6-14-14 0-7 6-12 12-12 2-12 10-18 22-18 12 0 20 7 22 16 6 0 12 5 12 12 0 8-6 14-14 14H22Z" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                </symbol>
             </defs>
 
-            <!-- 1. HEADER SECTION -->
-            <rect x="0" y="0" width="800" height="50" class="fill-black" />
-            <text id="header-text" x="400" y="32" text-anchor="middle" class="font-pixel fill-yellow" font-size="24">WEATHER & AQI | <tspan id="current-date">NOV 24, 2025</tspan> | HANOI, VN</text>
+            <!-- Header -->
+            <rect x="0" y="0" width="800" height="60" class="fill-black" />
+            <text id="header-text" x="400" y="40" text-anchor="middle" class="font-strong fill-white" font-size="22">
+                <tspan class="fill-yellow">WEATHER & AQI</tspan>
+                <tspan class="fill-white"> | </tspan>
+                <tspan id="current-date">NOV 24, 2025</tspan>
+                <tspan class="fill-white"> | </tspan>
+                <tspan id="header-location">HANOI, VN</tspan>
+            </text>
 
-            <!-- 2. MAIN WEATHER HERO SECTION -->
-            <rect x="0" y="50" width="800" height="180" class="fill-white" />
-            
-            <!-- Weather Icon -->
-            <image id="weather-icon" x="50" y="70" width="100" height="100" href="https://openweathermap.org/img/wn/10d@2x.png"/>
+            <!-- Divider -->
+            <line x1="520" y1="80" x2="520" y2="420" stroke="#e6e6e6" stroke-width="2"/>
 
-            <!-- Temperature -->
-            <text id="temp-main" x="400" y="130" text-anchor="middle" class="font-pixel fill-black" font-size="90">--°C</text>
-            <text id="condition-main" x="400" y="170" text-anchor="middle" class="font-pixel fill-black" font-size="32">--</text>
+            <!-- Left Panel: Weather -->
+            <g id="weather-panel">
+                <g id="weather-hero" transform="translate(22, 58) scale(0.95)"></g>
 
-            <!-- AQI Gauge Area -->
-            <g id="aqi-gauge" transform="translate(650, 130)">
-                <!-- Gauge Arc Background -->
-                <path d="M-60 0 A 60 60 0 0 1 60 0" fill="none" stroke="#ccc" stroke-width="20" stroke-linecap="round" opacity="1"/>
-                
-                <!-- Gauge Active Arc -->
-                <path id="aqi-arc-active" d="M-60 0 A 60 60 0 0 1 60 0" fill="none" stroke="#FFD700" stroke-width="20" stroke-linecap="round" stroke-dasharray="188 188" opacity="0.8"/>
-                
-                <!-- Needle -->
-                <g id="aqi-needle-group" transform="rotate(0)">
-                    <line x1="0" y1="0" x2="50" y2="0" stroke="#000" stroke-width="4" stroke-linecap="round"/>
-                    <circle cx="0" cy="0" r="6" fill="#000"/>
+                <use id="weather-condition-icon" href="#icon-storm" x="360" y="88" width="82" height="82" />
+                <text id="condition-main" x="360" y="122" class="font-strong fill-black" font-size="20" text-anchor="start">RAIN/STORM</text>
+                <text id="temp-main" x="360" y="192" class="font-strong fill-black" font-size="82" text-anchor="start">24°C</text>
+
+                <!-- Weather action card -->
+                <g id="weather-action-card" transform="translate(40, 240)">
+                    <rect x="0" y="0" width="460" height="110" rx="12" ry="12" fill="white" stroke="#000" stroke-width="3"/>
+                    <text id="weather-action-condition" x="230" y="42" class="font-strong fill-black" font-size="18" text-anchor="middle">RAIN/STORM</text>
+                    <text id="weather-action-text" x="230" y="90" class="font-strong fill-black" font-size="32" text-anchor="middle">BRING UMBRELLA</text>
                 </g>
-                
-                <!-- AQI Text and Status -->
-                <text id="aqi-label" x="0" y="45" text-anchor="middle" class="font-pixel fill-black" font-size="28" font-weight="bold">--</text>
-                <text id="aqi-status" x="0" y="65" text-anchor="middle" class="font-pixel fill-black" font-size="14">--</text>
+
+                <!-- Stats row -->
+                <g transform="translate(20, 360)">
+                    <g transform="translate(0,0)">
+                        <rect x="0" y="0" width="220" height="74" rx="12" class="fill-black"/>
+                        <use href="#icon-drop" x="14" y="18" width="32" height="32" fill="#ffc800"/>
+                        <text x="56" y="34" class="font-body fill-yellow" font-size="15">Humidity</text>
+                        <text id="humidity" x="56" y="60" class="font-strong fill-white" font-size="24">92%</text>
+                    </g>
+                    <g transform="translate(250,0)">
+                        <rect x="0" y="0" width="220" height="74" rx="12" class="fill-black"/>
+                        <use href="#icon-thermo" x="14" y="18" width="32" height="32" fill="#ffc800" stroke="#ffc800"/>
+                        <text x="56" y="34" class="font-body fill-yellow" font-size="15">Feels Like</text>
+                        <text id="feels-like" x="56" y="60" class="font-strong fill-white" font-size="24">28°C</text>
+                    </g>
+                    <g transform="translate(500,0)">
+                        <rect x="0" y="0" width="220" height="74" rx="12" class="fill-black"/>
+                        <use href="#icon-wind" x="14" y="18" width="32" height="32" fill="#ffc800" stroke="#ffc800"/>
+                        <text x="56" y="34" class="font-body fill-yellow" font-size="15">Wind</text>
+                        <text id="wind-speed" x="56" y="60" class="font-strong fill-white" font-size="24">12 km/h</text>
+                    </g>
+                </g>
             </g>
 
-            <!-- 3. ACTION BANNER -->
-            <g transform="translate(20, 200)">
-                <rect x="0" y="0" width="760" height="50" rx="10" ry="10" fill="white" class="stroke-yellow" stroke-width="4"/>
-                <text id="action-text" x="380" y="32" text-anchor="middle" class="font-pixel fill-black" font-size="20">ACTION SUGGESTED: BRING UMBRELLA ☂ | WEAR MASK 😷</text>
+            <!-- Right Panel: AQI -->
+            <g id="aqi-panel" transform="translate(540, 90)">
+                <g id="aqi-gauge" transform="translate(140, 140)">
+                    <circle cx="0" cy="0" r="94" stroke="#000" stroke-width="26" fill="none"/>
+                    <circle id="aqi-arc-active" cx="0" cy="0" r="94" stroke="#ffc800" stroke-width="26" fill="none" stroke-linecap="round" stroke-dasharray="254 590" transform="rotate(-90)"/>
+                    <circle cx="0" cy="0" r="78" fill="#000"/>
+                    <text x="0" y="-14" text-anchor="middle" class="font-body fill-white" font-size="18">AQI</text>
+                    <text id="aqi-label" x="0" y="34" text-anchor="middle" class="font-strong fill-yellow" font-size="58">155</text>
+                    <text id="aqi-status" x="0" y="68" text-anchor="middle" class="font-strong fill-white" font-size="22">UNHEALTHY</text>
+                </g>
+
+                <g id="aqi-action-card" transform="translate(0, 250)">
+                    <g id="aqi-action-icon" transform="translate(0,0)"></g>
+                    <text id="aqi-action-text" x="140" y="72" class="font-strong fill-black" font-size="32" text-anchor="start">WEAR MASK</text>
+                </g>
             </g>
+            <rect x="0" y="440" width="800" height="40" fill="#f7f7f7"/>
 
-            <!-- 4. DETAILS GRID (Data Table) -->
-            <rect x="0" y="270" width="800" height="60" class="fill-black" />
-            
-            <!-- Row 1 -->
-            <text x="20" y="295" class="font-pixel fill-yellow" font-size="18">FEELS LIKE: <tspan id="feels-like" class="fill-white">--°C</tspan></text>
-            <text x="280" y="295" class="font-pixel fill-yellow" font-size="18">HUMIDITY: <tspan id="humidity" class="fill-white">--%</tspan></text>
-            <text x="540" y="295" class="font-pixel fill-yellow" font-size="18">PM2.5: <tspan id="pm25" class="fill-white">-- µg/m³</tspan></text>
-
-            <!-- 5. QUOTE SECTION -->
-            <g transform="translate(20, 340)">
-                <rect x="0" y="0" width="760" height="60" rx="5" ry="5" fill="white" class="stroke-yellow" stroke-width="3"/>
-                <text id="quote-label" x="10" y="25" class="font-pixel fill-black" font-size="16">QUOTE:</text>
-                <!-- Broken into tspans for simple wrapping -->
-                <text x="80" y="25" class="font-pixel fill-black" font-size="16">
-                    <tspan id="quote-line-1">“IN EVERY WALK WITH NATURE ONE RECEIVES</tspan>
-                    <tspan id="quote-line-2" x="80" dy="20">FAR MORE THAN HE SEEKS.” – JOHN MUIR</tspan>
-                </text>
-            </g>
-
-            <!-- 6. FOOTER -->
-            <rect x="0" y="460" width="800" height="20" class="fill-black" />
-            <text id="last-updated" x="790" y="475" text-anchor="end" class="font-pixel fill-yellow" font-size="12">UPDATED 11:15 AM</text>
-            <text x="10" y="475" text-anchor="start" class="font-pixel fill-yellow" font-size="12">E-INK DAILY BRIEF</text>
-
+            <!-- Footer -->
+            <text id="quote-text" x="400" y="465" text-anchor="middle" class="font-body fill-muted" font-size="15">"I don't wish for an easy life, I wish to have strength to conquer challenges"</text>
+            <text id="last-updated" x="780" y="465" text-anchor="end" class="font-body fill-muted" font-size="12">Update at: 14:30</text>
         </svg>
         <!-- END OF SVG CODE -->
     </div>
 
     <script>
+        const CONFIG = {
+            lat: 21.0285,
+            lon: 105.8542,
+            locationLabel: 'HANOI, VN',
+            quote: "I don't wish for an easy life, I wish to have strength to conquer challenges",
+        };
+
+        const FALLBACK_WEATHER = {
+            weather: [{ id: 201, description: 'Rain/Storm' }],
+            main: { temp: 24, feels_like: 28, humidity: 92 },
+            wind: { speed: 3.3 },
+        };
+
+        const FALLBACK_AQI = {
+            list: [{ components: { pm2_5: 155 } }],
+        };
+
+        const FALLBACK_LAST_UPDATED = '14:30';
+
+        const WEATHER_ACTIONS = [
+            { tempMax: 5, humidityMin: 0, weatherCodes: [511, 600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622], action: "Dress warmest, avoid all travel. Extreme cold risk.", condition: "Severe Winter Weather", iconKey: "cold" },
+            { tempMax: 5, humidityMin: 0, weatherCodes: [800, 801, 802, 803, 804], action: "Wear heavy layers, cover skin. Cold wind risk.", condition: "Freezing Cold", iconKey: "cold" },
+            { tempMax: 15, humidityMin: 70, weatherCodes: null, action: "Wear warm, insulating layers. Indoor mold check.", condition: "Chilly & Damp", iconKey: "umbrella" },
+            { tempMin: 30, humidityMin: 75, weatherCodes: null, action: "Stay hydrated, limit activity. Heat stress danger.", condition: "Extreme Humidity/Muggy", iconKey: "heat" },
+            { tempMin: 30, humidityMin: 50, weatherCodes: null, action: "Wear light clothes, drink water often. High heat index.", condition: "Very Hot & Humid", iconKey: "heat" },
+            { tempMin: 30, humidityMax: 40, weatherCodes: null, action: "Hydrate constantly, protect skin. Dehydration risk.", condition: "Hot & Dry", iconKey: "heat" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [200, 201, 202, 210, 211, 212, 221, 230, 231, 232], action: "Seek immediate shelter. Severe T-Storm risk.", condition: "Thunderstorm", iconKey: "umbrella" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [502, 503, 504, 522], action: "Avoid travel, stay indoors. Heavy rain/flood risk.", condition: "Heavy Rain", iconKey: "umbrella" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [300, 301, 302, 310, 311, 312, 313, 314, 321, 500, 501, 520, 521, 531], action: "Bring umbrella/rain gear. Wet roads.", condition: "Rain/Drizzle", iconKey: "umbrella" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [701, 711, 721, 741], action: "Low visibility, drive with caution. Wear mask if smoky.", condition: "Mist/Fog/Haze", iconKey: "haze" },
+            { tempMin: 15, tempMax: 30, humidityMax: 40, weatherCodes: null, action: "Enjoy outdoors, stay hydrated. Dry air check.", condition: "Pleasant & Dry", iconKey: "sunny" },
+            { tempMin: 15, tempMax: 30, humidityMin: 70, weatherCodes: null, action: "Comfortable, minor stickiness. Good time for light walk.", condition: "Warm & Humid", iconKey: "sunny" },
+            { tempMin: 15, tempMax: 30, humidityMin: 41, humidityMax: 69, weatherCodes: null, action: "Perfect weather day! Enjoy!", condition: "Ideal Comfort", iconKey: "sunny" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [800, 801, 802, 803, 804], action: "Standard day. Check UV index for sun safety.", condition: "Clear/Cloudy Sky", iconKey: "sunny" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: null, action: "Enjoy the day. Standard precautions.", condition: "Comfortable Day", iconKey: "sunny" },
+        ];
+
+        const AQI_ACTIONS = [
+            { max: 12, status: 'GOOD', action: 'Enjoy the fresh air', iconKey: 'smile', color: '#00E400' },
+            { max: 35.4, status: 'MODERATE', action: 'Limit long outdoor exposure', iconKey: 'breeze', color: '#FFFF00' },
+            { max: 55.4, status: 'UNHEALTHY (SG)', action: 'Mask up if sensitive', iconKey: 'mask', color: '#FF7E00' },
+            { max: 150.4, status: 'UNHEALTHY', action: 'Wear mask outdoors', iconKey: 'mask', color: '#FF0000' },
+            { max: 250.4, status: 'VERY UNHEALTHY', action: 'Stay indoors when possible', iconKey: 'home', color: '#8F3F97' },
+            { max: Infinity, status: 'HAZARDOUS', action: 'Avoid outdoor activity', iconKey: 'mask', color: '#7E0023' },
+        ];
+
+        const WEATHER_ACTION_ICONS = {
+            umbrella: `
+                <svg width="220" height="220" viewBox="0 0 220 220">
+                    <path d="M32 134c0-52 44-94 98-94s98 42 98 94H32Z" fill="#000" stroke="#000" stroke-width="8" stroke-linejoin="round"/>
+                    <path d="M130 134v76" stroke="#ffc800" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M130 206c0 16-14 30-30 30" stroke="#000" stroke-width="12" stroke-linecap="round" fill="none"/>
+                    <path d="M98 32c0 10-8 18-18 18s-18-8-18-18C62 16 80 0 80 0s18 16 18 32Z" fill="#000"/>
+                    <path d="M180 56c0 8-6 14-12 14s-12-6-12-14c0-10 12-22 12-22s12 12 12 22Z" fill="#000"/>
+                    <path d="M56 78c-16 8-28 24-30 40" stroke="#000" stroke-width="10" stroke-linecap="round" fill="none"/>
+                    <path d="M178 78c16 8 28 24 30 40" stroke="#000" stroke-width="10" stroke-linecap="round" fill="none"/>
+                    <circle cx="130" cy="134" r="10" fill="#000"/>
+                    <path d="M70 74c0 10-8 18-16 18s-16-8-16-18c0-14 16-30 16-30s16 16 16 30Z" fill="#000"/>
+                    <path d="M106 64c0 9-7 16-14 16s-14-7-14-16c0-12 14-26 14-26s14 14 14 26Z" fill="#000"/>
+                    <path d="M170 64c0 9-7 16-14 16s-14-7-14-16c0-12 14-26 14-26s14 14 14 26Z" fill="#000"/>
+                    <path d="M34 60c0 6-5 10-10 10S14 66 14 60c0-8 10-18 10-18s10 10 10 18Z" fill="#000"/>
+                    <path d="M52 42c0 6-5 10-10 10S32 48 32 42c0-8 10-18 10-18s10 10 10 18Z" fill="#000" opacity="0.9"/>
+                    <path d="M18 40c0 5-4 9-9 9s-9-4-9-9c0-8 9-16 9-16s9 8 9 16Z" fill="#000" opacity="0.7"/>
+                </svg>
+            `,
+            cold: `
+                <svg width="200" height="200" viewBox="0 0 130 130">
+                    <circle cx="65" cy="65" r="42" fill="#000"/>
+                    <path d="M65 28v74M42 42l46 46M42 88l46-46" stroke="#ffc800" stroke-width="8" stroke-linecap="round"/>
+                    <circle cx="65" cy="65" r="12" fill="#ffc800"/>
+                </svg>
+            `,
+            heat: `
+                <svg width="200" height="200" viewBox="0 0 130 130">
+                    <circle cx="65" cy="65" r="32" fill="#ffc800"/>
+                    <g stroke="#000" stroke-width="6" stroke-linecap="round">
+                        <line x1="65" y1="18" x2="65" y2="2"/>
+                        <line x1="65" y1="128" x2="65" y2="112"/>
+                        <line x1="18" y1="65" x2="2" y2="65"/>
+                        <line x1="128" y1="65" x2="112" y2="65"/>
+                        <line x1="25" y1="25" x2="12" y2="12"/>
+                        <line x1="105" y1="25" x2="118" y2="12"/>
+                        <line x1="25" y1="105" x2="12" y2="118"/>
+                        <line x1="105" y1="105" x2="118" y2="118"/>
+                    </g>
+                </svg>
+            `,
+            haze: `
+                <svg width="200" height="200" viewBox="0 0 130 130">
+                    <rect x="20" y="40" width="90" height="16" rx="8" fill="#000"/>
+                    <rect x="10" y="65" width="90" height="16" rx="8" fill="#ffc800"/>
+                    <rect x="30" y="90" width="80" height="16" rx="8" fill="#000"/>
+                    <circle cx="90" cy="50" r="10" fill="#ffc800"/>
+                </svg>
+            `,
+            sunny: `
+                <svg width="200" height="200" viewBox="0 0 130 130">
+                    <circle cx="65" cy="65" r="32" fill="#ffc800" stroke="#000" stroke-width="6"/>
+                    <g stroke="#000" stroke-width="6" stroke-linecap="round">
+                        <line x1="65" y1="18" x2="65" y2="2"/>
+                        <line x1="65" y1="128" x2="65" y2="112"/>
+                        <line x1="18" y1="65" x2="2" y2="65"/>
+                        <line x1="128" y1="65" x2="112" y2="65"/>
+                        <line x1="25" y1="25" x2="12" y2="12"/>
+                        <line x1="105" y1="25" x2="118" y2="12"/>
+                        <line x1="25" y1="105" x2="12" y2="118"/>
+                        <line x1="105" y1="105" x2="118" y2="118"/>
+                    </g>
+                </svg>
+            `,
+        };
+
+        const AQI_ACTION_ICONS = {
+            mask: `
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="44" fill="#ffc800" stroke="#000" stroke-width="6"/>
+                    <path d="M46 48c2 6 8 6 10 0" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+                    <path d="M72 48c2 6 8 6 10 0" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+                    <rect x="32" y="56" width="56" height="26" rx="8" fill="#fff" stroke="#000" stroke-width="6"/>
+                    <path d="M32 66c-6 0-12-4-12-10" stroke="#000" stroke-width="6" stroke-linecap="round" fill="none"/>
+                    <path d="M88 66c6 0 12-4 12-10" stroke="#000" stroke-width="6" stroke-linecap="round" fill="none"/>
+                    <rect x="42" y="62" width="36" height="10" rx="4" fill="#000"/>
+                    <path d="M42 72c8 6 20 6 28 0" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/>
+                </svg>
+            `,
+            home: `
+                <svg width="110" height="110" viewBox="0 0 110 110">
+                    <path d="M15 60 55 25 95 60v30H15Z" fill="#000"/>
+                    <rect x="40" y="62" width="30" height="28" rx="4" fill="#ffc800"/>
+                    <rect x="53" y="68" width="10" height="22" fill="#000"/>
+                </svg>
+            `,
+            breeze: `
+                <svg width="110" height="110" viewBox="0 0 110 110">
+                    <path d="M20 46h52a10 10 0 1 0-10-10" stroke="#000" stroke-width="8" fill="none" stroke-linecap="round"/>
+                    <path d="M20 70h58a10 10 0 1 1-10 10" stroke="#ffc800" stroke-width="8" fill="none" stroke-linecap="round"/>
+                </svg>
+            `,
+            smile: `
+                <svg width="110" height="110" viewBox="0 0 110 110">
+                    <circle cx="55" cy="55" r="40" fill="#ffc800" stroke="#000" stroke-width="6"/>
+                    <circle cx="40" cy="45" r="6" fill="#000"/>
+                    <circle cx="70" cy="45" r="6" fill="#000"/>
+                    <path d="M38 68c10 10 24 10 34 0" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/>
+                </svg>
+            `,
+        };
+
+        function setInlineSVG(targetId, svgMarkup) {
+            const container = document.getElementById(targetId);
+            if (container) {
+                container.innerHTML = svgMarkup;
+            }
+        }
+
         function updateCurrentDate() {
             const now = new Date();
             const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -120,24 +314,21 @@
             const day = now.getDate();
             const year = now.getFullYear();
             document.getElementById('current-date').textContent = `${month} ${day}, ${year}`;
+            document.getElementById('header-location').textContent = CONFIG.locationLabel;
+            document.getElementById('quote-text').textContent = `"${CONFIG.quote}"`;
         }
 
         async function loadEnvApiKey() {
-            // First check if API key is set via window object (for local dev)
             if (window.OPENWEATHER_API_KEY) {
                 return window.OPENWEATHER_API_KEY;
             }
-            
-            // Try to load from env-config.js (for local dev)
             try {
                 const module = await import('./env-config.js');
                 const key = module.OPENWEATHER_API_KEY ?? module.default ?? '';
                 if (key) return key;
             } catch (error) {
-                // env-config.js doesn't exist, which is fine for production
+                // env-config.js may not exist; ignore
             }
-            
-            // For production (Vercel), fetch from API endpoint
             try {
                 const response = await fetch('/api/config');
                 const data = await response.json();
@@ -148,41 +339,8 @@
             }
         }
 
-        function getAQIStatus(pm25) {
-            if (pm25 <= 12) return { status: 'GOOD', color: '#00E400' };
-            if (pm25 <= 35.4) return { status: 'MODERATE', color: '#FFFF00' };
-            if (pm25 <= 55.4) return { status: 'UNHEALTHY (SG)', color: '#FF7E00' };
-            if (pm25 <= 150.4) return { status: 'UNHEALTHY', color: '#FF0000' };
-            if (pm25 <= 250.4) return { status: 'VERY UNHEALTHY', color: '#8F3F97' };
-            return { status: 'HAZARDOUS', color: '#7E0023' };
-        }
-
-        function updateAQIGauge(pm25) {
-            const maxPM25 = 360;
-            const normalizedValue = Math.min(pm25 / maxPM25, 1);
-            
-            // Arc length: semicircle is ~188 units, so fill proportionally
-            const arcLength = 188 * normalizedValue;
-            
-            // Rotation: starts at -90° (left), ends at +90° (right), total range is 180°
-            // Like a clock: -90° is 9 o'clock, 0° is 12 o'clock, +90° is 3 o'clock
-            const rotation = -170 + (normalizedValue * 180);
-            
-            const aqiInfo = getAQIStatus(pm25);
-
-            // Update arc
-            document.getElementById('aqi-arc-active').setAttribute('stroke-dasharray', `${arcLength} 188`);
-            document.getElementById('aqi-arc-active').setAttribute('stroke', aqiInfo.color);
-
-            // Update needle
-            document.getElementById('aqi-needle-group').setAttribute('transform', `rotate(${rotation})`);
-
-            // Update text
-            document.getElementById('aqi-label').textContent = Math.round(pm25);
-            document.getElementById('aqi-status').textContent = aqiInfo.status;
-        }
         // Cache management
-        const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+        const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
         const WEATHER_CACHE_KEY = 'weather_cache';
         const AQI_CACHE_KEY = 'aqi_cache';
 
@@ -190,17 +348,10 @@
             try {
                 const cached = localStorage.getItem(key);
                 if (!cached) return null;
-                
                 const { data, timestamp } = JSON.parse(cached);
-                const now = Date.now();
-                
-                // Check if cache is still valid (within 30 minutes)
-                if (now - timestamp < CACHE_DURATION) {
-                    console.log(`Using cached data for ${key} (${Math.round((now - timestamp) / 60000)} minutes old)`);
+                if (Date.now() - timestamp < CACHE_DURATION) {
                     return data;
                 }
-                
-                // Cache expired, remove it
                 localStorage.removeItem(key);
                 return null;
             } catch (error) {
@@ -211,80 +362,141 @@
 
         function setCachedData(key, data) {
             try {
-                const cacheEntry = {
-                    data: data,
-                    timestamp: Date.now()
-                };
-                localStorage.setItem(key, JSON.stringify(cacheEntry));
+                localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
             } catch (error) {
                 console.error('Error setting cache:', error);
             }
         }
 
         async function fetchWeatherData(key) {
-            const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=21.0285&lon=105.8542&appid=${key}&units=metric`);
+            const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${CONFIG.lat}&lon=${CONFIG.lon}&appid=${key}&units=metric`);
             const data = await response.json();
             setCachedData(WEATHER_CACHE_KEY, data);
-            console.log('Fetched fresh weather data');
             return data;
         }
 
         async function fetchAQIData(key) {
-            const response = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=21.0285&lon=105.8542&appid=${key}`);
+            const response = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${CONFIG.lat}&lon=${CONFIG.lon}&appid=${key}`);
             const data = await response.json();
             setCachedData(AQI_CACHE_KEY, data);
-            console.log('Fetched fresh AQI data');
             return data;
+        }
+
+        function pickWeatherAction(temp, humidity, weatherId) {
+            return WEATHER_ACTIONS.find(rule => {
+                if (typeof rule.tempMin === 'number' && temp < rule.tempMin) return false;
+                if (typeof rule.tempMax === 'number' && temp > rule.tempMax) return false;
+                if (typeof rule.humidityMin === 'number' && humidity < rule.humidityMin) return false;
+                if (typeof rule.humidityMax === 'number' && humidity > rule.humidityMax) return false;
+                if (Array.isArray(rule.weatherCodes) && !rule.weatherCodes.includes(weatherId)) return false;
+                return true;
+            }) ?? WEATHER_ACTIONS[WEATHER_ACTIONS.length - 1];
+        }
+
+        function pickAQIAction(pm25) {
+            return AQI_ACTIONS.find(rule => pm25 <= rule.max) ?? AQI_ACTIONS[AQI_ACTIONS.length - 1];
+        }
+
+        function updateAQIGauge(pm25, aqiInfo) {
+            const maxPM25 = 360;
+            const normalizedValue = Math.min(pm25 / maxPM25, 1);
+            const radius = 94;
+            const circumference = 2 * Math.PI * radius;
+            const arcLength = circumference * normalizedValue;
+
+            document.getElementById('aqi-arc-active').setAttribute('stroke-dasharray', `${arcLength} ${circumference}`);
+            document.getElementById('aqi-arc-active').setAttribute('stroke', aqiInfo.color ?? '#ffc800');
+            document.getElementById('aqi-label').textContent = Math.round(pm25);
+            document.getElementById('aqi-status').textContent = aqiInfo.status;
+        }
+
+        function formatTime(now) {
+            const hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            return `${String(hours).padStart(2, '0')}:${minutes}`;
+        }
+
+        function kmhFromMs(speedMs) {
+            return Math.round(speedMs * 3.6);
+        }
+
+        function getConditionIconId(weatherId) {
+            if (!weatherId) return '#icon-cloud';
+            if (weatherId >= 200 && weatherId < 600) return '#icon-storm';
+            if (weatherId >= 600 && weatherId < 700) return '#icon-cloud';
+            if (weatherId >= 700 && weatherId < 800) return '#icon-cloud';
+            if (weatherId === 800) return '#icon-cloud';
+            if (weatherId > 800) return '#icon-cloud';
+            return '#icon-cloud';
+        }
+
+        function renderDashboard(weatherData, aqiData, { useCurrentTime = true } = {}) {
+            const description = (weatherData.weather?.[0]?.description ?? 'Rain/Storm').toUpperCase();
+            const temp = Math.round(weatherData.main?.temp ?? FALLBACK_WEATHER.main.temp);
+            const feelsLike = Math.round(weatherData.main?.feels_like ?? FALLBACK_WEATHER.main.feels_like);
+            const humidity = weatherData.main?.humidity ?? FALLBACK_WEATHER.main.humidity;
+            const windSpeed = kmhFromMs(weatherData.wind?.speed ?? FALLBACK_WEATHER.wind.speed);
+            const weatherId = weatherData.weather?.[0]?.id ?? FALLBACK_WEATHER.weather[0].id;
+
+            document.getElementById('condition-main').textContent = description;
+            document.getElementById('temp-main').textContent = `${temp}°C`;
+            document.getElementById('feels-like').textContent = `${feelsLike}°C`;
+            document.getElementById('humidity').textContent = `${humidity}%`;
+            document.getElementById('wind-speed').textContent = `${windSpeed} km/h`;
+
+            const conditionIconEl = document.getElementById('weather-condition-icon');
+            if (conditionIconEl) {
+                conditionIconEl.setAttribute('href', getConditionIconId(weatherId));
+            }
+
+            const weatherAction = pickWeatherAction(temp, humidity, weatherId);
+            document.getElementById('weather-action-condition').textContent = weatherAction.condition.toUpperCase();
+            document.getElementById('weather-action-text').textContent = weatherAction.action.toUpperCase();
+            setInlineSVG('weather-hero', WEATHER_ACTION_ICONS[weatherAction.iconKey] ?? WEATHER_ACTION_ICONS.sunny);
+
+            const pm25 = Math.round(aqiData.list?.[0]?.components?.pm2_5 ?? FALLBACK_AQI.list[0].components.pm2_5);
+            const aqiAction = pickAQIAction(pm25);
+
+            updateAQIGauge(pm25, aqiAction);
+            document.getElementById('aqi-action-text').textContent = aqiAction.action.toUpperCase();
+            setInlineSVG('aqi-action-icon', AQI_ACTION_ICONS[aqiAction.iconKey] ?? AQI_ACTION_ICONS.mask);
+
+            const now = new Date();
+            const updateTime = useCurrentTime ? formatTime(now) : FALLBACK_LAST_UPDATED;
+            document.getElementById('last-updated').textContent = `Update at: ${updateTime}`;
         }
 
         async function updateWeather() {
             const key = await loadEnvApiKey();
-            if (!key) return;
-            try {
-                // Try to get cached weather data first
-                let data = getCachedData(WEATHER_CACHE_KEY);
-                if (!data) {
-                    data = await fetchWeatherData(key);
+            let weatherData = null;
+            let aqiData = null;
+
+            if (key) {
+                try {
+                    weatherData = getCachedData(WEATHER_CACHE_KEY);
+                    if (!weatherData) weatherData = await fetchWeatherData(key);
+                } catch (error) {
+                    console.error('Weather fetch failed, using fallback', error);
                 }
-                
-                // Weather info
-                const icon = data.weather[0].icon;
-                const description = data.weather[0].description.toUpperCase();
-                const temp = Math.round(data.main.temp);
-                const feelsLike = Math.round(data.main.feels_like);
-                
-                // Other data
-                const humidity = data.main.humidity;
-                
-                // Update DOM
-                document.getElementById('weather-icon').setAttribute('href', `https://openweathermap.org/img/wn/${icon}@2x.png`);
-                document.getElementById('condition-main').textContent = description;
-                document.getElementById('temp-main').textContent = `${temp}°C`;
-                document.getElementById('feels-like').textContent = `${feelsLike}°C`;
-                document.getElementById('humidity').textContent = `${humidity}%`;
-                
-                // Try to get cached AQI data first
-                let aqiData = getCachedData(AQI_CACHE_KEY);
-                if (!aqiData) {
-                    aqiData = await fetchAQIData(key);
+
+                try {
+                    aqiData = getCachedData(AQI_CACHE_KEY);
+                    if (!aqiData) aqiData = await fetchAQIData(key);
+                } catch (error) {
+                    console.error('AQI fetch failed, using fallback', error);
                 }
-                const pm25 = Math.round(aqiData.list[0].components.pm2_5);
-                
-                // Use PM2.5 as AQI value
-                updateAQIGauge(pm25);
-                document.getElementById('pm25').textContent = `${pm25} µg/m³`;
-                
-                // Update last updated time
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
-                document.getElementById('last-updated').textContent = `UPDATED ${hours}:${minutes} ${ampm}`;
-                
-            } catch (error) {
-                console.error(error);
             }
+
+            if (!weatherData) weatherData = FALLBACK_WEATHER;
+            if (!aqiData) aqiData = FALLBACK_AQI;
+
+            const isFallback = weatherData === FALLBACK_WEATHER || aqiData === FALLBACK_AQI;
+            renderDashboard(weatherData, aqiData, { useCurrentTime: !isFallback });
         }
+
+        // Keep the layout populated even before the first data refresh.
+        setInlineSVG('weather-hero', WEATHER_ACTION_ICONS.umbrella);
+        setInlineSVG('aqi-action-icon', AQI_ACTION_ICONS.mask);
 
         updateCurrentDate();
         updateWeather();
@@ -292,4 +504,3 @@
 
 </body>
 </html>
-
