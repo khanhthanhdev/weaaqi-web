@@ -319,14 +319,18 @@
         }
 
         async function loadEnvApiKey() {
+<<<<<<< HEAD
             if (window.OPENWEATHER_API_KEY) {
                 return window.OPENWEATHER_API_KEY;
             }
+=======
+>>>>>>> parent of 8cdba2f (Fix API key loading for Vercel deployment)
             try {
                 const module = await import('./env-config.js');
                 const key = module.OPENWEATHER_API_KEY ?? module.default ?? '';
-                if (key) return key;
+                return key;
             } catch (error) {
+<<<<<<< HEAD
                 // env-config.js may not exist; ignore
             }
             try {
@@ -335,6 +339,8 @@
                 return data.apiKey || '';
             } catch (error) {
                 console.error('Failed to load API key:', error);
+=======
+>>>>>>> parent of 8cdba2f (Fix API key loading for Vercel deployment)
                 return '';
             }
         }
