@@ -123,11 +123,27 @@
         }
 
         async function loadEnvApiKey() {
+            // First check if API key is set via window object (for local dev)
+            if (window.OPENWEATHER_API_KEY) {
+                return window.OPENWEATHER_API_KEY;
+            }
+            
+            // Try to load from env-config.js (for local dev)
             try {
                 const module = await import('./env-config.js');
                 const key = module.OPENWEATHER_API_KEY ?? module.default ?? '';
-                return key;
+                if (key) return key;
             } catch (error) {
+                // env-config.js doesn't exist, which is fine for production
+            }
+            
+            // For production (Vercel), fetch from API endpoint
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                return data.apiKey || '';
+            } catch (error) {
+                console.error('Failed to load API key:', error);
                 return '';
             }
         }
