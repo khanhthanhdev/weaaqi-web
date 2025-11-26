@@ -254,21 +254,24 @@
         const FALLBACK_LAST_UPDATED = '14:30';
 
         const WEATHER_ACTIONS = [
-            { tempMax: 5, humidityMin: 0, weatherCodes: [511, 600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622], action: "Dress warmest, avoid all travel. Extreme cold risk.", condition: "Severe Winter Weather", iconKey: "cold" },
-            { tempMax: 5, humidityMin: 0, weatherCodes: [800, 801, 802, 803, 804], action: "Wear heavy layers, cover skin. Cold wind risk.", condition: "Freezing Cold", iconKey: "cold" },
-            { tempMax: 15, humidityMin: 70, weatherCodes: null, action: "Wear warm, insulating layers. Indoor mold check.", condition: "Chilly & Damp", iconKey: "umbrella" },
-            { tempMin: 30, humidityMin: 75, weatherCodes: null, action: "Stay hydrated, limit activity. Heat stress danger.", condition: "Extreme Humidity/Muggy", iconKey: "heat" },
-            { tempMin: 30, humidityMin: 50, weatherCodes: null, action: "Wear light clothes, drink water often. High heat index.", condition: "Very Hot & Humid", iconKey: "heat" },
-            { tempMin: 30, humidityMax: 40, weatherCodes: null, action: "Hydrate constantly, protect skin. Dehydration risk.", condition: "Hot & Dry", iconKey: "heat" },
-            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [200, 201, 202, 210, 211, 212, 221, 230, 231, 232], action: "Seek immediate shelter. Severe T-Storm risk.", condition: "Thunderstorm", iconKey: "umbrella" },
-            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [502, 503, 504, 522], action: "Avoid travel, stay indoors. Heavy rain/flood risk.", condition: "Heavy Rain", iconKey: "umbrella" },
-            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [300, 301, 302, 310, 311, 312, 313, 314, 321, 500, 501, 520, 521, 531], action: "Bring umbrella/rain gear. Wet roads.", condition: "Rain/Drizzle", iconKey: "umbrella" },
-            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [701, 711, 721, 741], action: "Low visibility, drive with caution. Wear mask if smoky.", condition: "Mist/Fog/Haze", iconKey: "haze" },
-            { tempMin: 15, tempMax: 30, humidityMax: 40, weatherCodes: null, action: "Enjoy outdoors, stay hydrated. Dry air check.", condition: "Pleasant & Dry", iconKey: "sunny" },
-            { tempMin: 15, tempMax: 30, humidityMin: 70, weatherCodes: null, action: "Comfortable, minor stickiness. Good time for light walk.", condition: "Warm & Humid", iconKey: "sunny" },
-            { tempMin: 15, tempMax: 30, humidityMin: 41, humidityMax: 69, weatherCodes: null, action: "Perfect weather day! Enjoy!", condition: "Ideal Comfort", iconKey: "sunny" },
-            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [800, 801, 802, 803, 804], action: "Standard day. Check UV index for sun safety.", condition: "Clear/Cloudy Sky", iconKey: "sunny" },
-            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: null, action: "Enjoy the day. Standard precautions.", condition: "Comfortable Day", iconKey: "sunny" },
+            { tempMax: 5, humidityMin: 0, weatherCodes: [511, 600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622], action: "Stay warm, have warm tea. Extreme cold.", condition: "Severe Winter Weather", iconKey: "cold" },
+            { tempMax: 5, humidityMin: 0, weatherCodes: [800, 801, 802, 803, 804], action: "Stay warm, have warm tea.", condition: "Freezing Cold", iconKey: "cold" },
+            { tempMax: 10, humidityMin: 0, weatherCodes: null, action: "Warm tea recommended. Stay cozy.", condition: "Cold", iconKey: "tea" },
+            { tempMax: 15, humidityMin: 70, weatherCodes: null, action: "Wear warm layers. Stay dry.", condition: "Chilly & Damp", iconKey: "warm" },
+            { tempMin: 35, humidityMin: 50, weatherCodes: null, action: "Wear sunglasses, stay hydrated.", condition: "Very Hot", iconKey: "sunglasses" },
+            { tempMin: 30, humidityMin: 75, weatherCodes: null, action: "Wear sunglasses, drink water often.", condition: "Extreme Humidity/Muggy", iconKey: "sunglasses" },
+            { tempMin: 30, humidityMin: 50, weatherCodes: null, action: "Wear sunglasses, drink water.", condition: "Very Hot & Humid", iconKey: "sunglasses" },
+            { tempMin: 30, humidityMax: 40, weatherCodes: null, action: "Wear sunglasses, hydrate constantly.", condition: "Hot & Dry", iconKey: "sunglasses" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [200, 201, 202, 210, 211, 212, 221, 230, 231, 232], action: "Bring umbrella. Severe T-Storm.", condition: "Thunderstorm", iconKey: "umbrella" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [502, 503, 504, 522], action: "Bring umbrella. Heavy rain.", condition: "Heavy Rain", iconKey: "umbrella" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [300, 301, 302, 310, 311, 312, 313, 314, 321, 500, 501, 520, 521, 531], action: "Bring umbrella.", condition: "Rain/Drizzle", iconKey: "umbrella" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [701, 711, 721, 741], action: "Low visibility, wear mask if smoky.", condition: "Mist/Fog/Haze", iconKey: "haze" },
+            { tempMin: 25, tempMax: 35, humidityMax: 40, weatherCodes: [800, 801], action: "Wear sunglasses. Great day!", condition: "Sunny", iconKey: "sunglasses" },
+            { tempMin: 15, tempMax: 30, humidityMax: 40, weatherCodes: null, action: "Enjoy outdoors, stay hydrated.", condition: "Pleasant & Dry", iconKey: "sunny" },
+            { tempMin: 15, tempMax: 30, humidityMin: 70, weatherCodes: null, action: "Comfortable day. Light walk.", condition: "Warm & Humid", iconKey: "sunny" },
+            { tempMin: 15, tempMax: 30, humidityMin: 41, humidityMax: 69, weatherCodes: null, action: "Perfect weather! Enjoy!", condition: "Ideal Comfort", iconKey: "sunny" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [800, 801, 802, 803, 804], action: "Standard day. Check UV index.", condition: "Clear/Cloudy Sky", iconKey: "sunny" },
+            { tempMin: -Infinity, tempMax: Infinity, weatherCodes: null, action: "Enjoy the day.", condition: "Comfortable Day", iconKey: "sunny" },
         ];
 
         const AQI_ACTIONS = [
@@ -280,12 +283,22 @@
             { max: Infinity, status: 'HAZARDOUS', action: 'Avoid outdoor activity', iconKey: 'mask', color: '#7E0023' },
         ];
 
+        function getAqiActionForWeather(aqiAction, temp) {
+            if (temp >= 30 && aqiAction.max <= 100) {
+                return { ...aqiAction, action: 'Drink water', iconKey: 'water' };
+            }
+            return aqiAction;
+        }
+
         const WEATHER_ACTION_ICONS = {
             umbrella: `<svg viewBox="0 0 120 120"><path d="M12 72c0-34 29-62 64-62s64 28 64 62H12Z" fill="#000" stroke="#000" stroke-width="6" stroke-linejoin="round"/><path d="M76 72v44" stroke="#ffc800" stroke-width="10" stroke-linecap="round"/><path d="M76 114c0 10-10 20-22 20" stroke="#000" stroke-width="9" stroke-linecap="round" fill="none"/><circle cx="76" cy="72" r="7" fill="#000"/><path d="M50 16c0 8-6 14-14 14s-14-6-14-14C22 6 36-6 36-6s14 12 14 22Z" fill="#000"/><path d="M110 26c0 6-5 11-11 11s-11-5-11-11c0-8 11-18 11-18s11 10 11 18Z" fill="#000"/></svg>`,
-            cold: `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="#000"/><path d="M60 22v76M40 40l40 40M40 80l40-40" stroke="#ffc800" stroke-width="8" stroke-linecap="round"/><circle cx="60" cy="60" r="12" fill="#ffc800"/></svg>`,
+            cold: `<svg viewBox="0 0 108 108"><path d="M92.75 68.35c6.96-6.8 11.25-16.3 11.25-26.82C104 20.8 87.2 4 66.5 4c-17.83 0-32.75 12.47-36.54 29.19h-3.04C14.33 33.19 4 43.49 4 56.13c0 7.3 3.42 13.8 8.75 18.02" stroke="#000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M54 61.5v17.73M61.08 54.42L54 61.5l-7.08-7.08M38.67 70.35L54 79.23M36.08 60.67l2.59 9.68-9.67 2.58M38.67 88.07L54 79.23M29 85.48l9.67 2.59-2.59 9.67M54 96.91V79.23M46.92 104L54 96.91l7.08 7.09M69.33 88.07L54 79.23M71.92 97.74l-2.59-9.67 9.67-2.59M69.33 70.35L54 79.23M79 72.93l-9.67-2.58 2.59-9.68" stroke="#000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
             heat: `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="30" fill="#ffc800" stroke="#000" stroke-width="6"/><g stroke="#000" stroke-width="6" stroke-linecap="round"><line x1="60" y1="12" x2="60" y2="0"/><line x1="60" y1="120" x2="60" y2="108"/><line x1="12" y1="60" x2="0" y2="60"/><line x1="120" y1="60" x2="108" y2="60"/><line x1="20" y1="20" x2="8" y2="8"/><line x1="100" y1="20" x2="112" y2="8"/><line x1="20" y1="100" x2="8" y2="112"/><line x1="100" y1="100" x2="112" y2="112"/></g></svg>`,
             haze: `<svg viewBox="0 0 120 120"><rect x="18" y="30" width="84" height="14" rx="7" fill="#000"/><rect x="10" y="52" width="84" height="14" rx="7" fill="#ffc800"/><rect x="26" y="74" width="80" height="14" rx="7" fill="#000"/><circle cx="86" cy="36" r="8" fill="#ffc800"/></svg>`,
             sunny: `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="30" fill="#ffc800" stroke="#000" stroke-width="6"/><g stroke="#000" stroke-width="6" stroke-linecap="round"><line x1="60" y1="14" x2="60" y2="0"/><line x1="60" y1="120" x2="60" y2="106"/><line x1="14" y1="60" x2="0" y2="60"/><line x1="120" y1="60" x2="106" y2="60"/><line x1="20" y1="20" x2="8" y2="8"/><line x1="100" y1="20" x2="112" y2="8"/><line x1="20" y1="100" x2="8" y2="112"/><line x1="100" y1="100" x2="112" y2="112"/></g></svg>`,
+            sunglasses: `<svg viewBox="0 0 120 120"><ellipse cx="35" cy="60" rx="25" ry="20" fill="#000" stroke="#000" stroke-width="4"/><ellipse cx="85" cy="60" rx="25" ry="20" fill="#000" stroke="#000" stroke-width="4"/><path d="M60 60c0-8 5-12 10-12" stroke="#000" stroke-width="4" fill="none"/><path d="M60 60c0-8-5-12-10-12" stroke="#000" stroke-width="4" fill="none"/><line x1="10" y1="55" x2="0" y2="50" stroke="#000" stroke-width="4"/><line x1="110" y1="55" x2="120" y2="50" stroke="#000" stroke-width="4"/><ellipse cx="35" cy="60" rx="18" ry="14" fill="#ffc800" opacity="0.3"/><ellipse cx="85" cy="60" rx="18" ry="14" fill="#ffc800" opacity="0.3"/></svg>`,
+            tea: `<svg viewBox="0 0 120 120"><path d="M20 50h60v45c0 11-13 20-30 20s-30-9-30-20V50z" fill="#ffc800" stroke="#000" stroke-width="5"/><path d="M80 55h15c8 0 15 7 15 15s-7 15-15 15H80" stroke="#000" stroke-width="5" fill="none"/><path d="M35 35c0-8 5-15 15-15s15 7 15 15" stroke="#000" stroke-width="4" fill="none" opacity="0.6"/><path d="M45 30c0-6 4-12 12-12" stroke="#000" stroke-width="4" fill="none" opacity="0.6"/><ellipse cx="50" cy="50" rx="30" ry="8" fill="#000" opacity="0.2"/></svg>`,
+            warm: `<svg viewBox="0 0 120 120"><path d="M60 20v15M45 25l5 12M75 25l-5 12" stroke="#ffc800" stroke-width="4" stroke-linecap="round"/><path d="M35 45h50l8 55H27l8-55z" fill="#ffc800" stroke="#000" stroke-width="5"/><path d="M35 45c0-15 11-25 25-25s25 10 25 25" stroke="#000" stroke-width="5" fill="none"/><rect x="45" y="60" width="30" height="25" rx="3" fill="#000"/><circle cx="60" cy="72" r="6" fill="#ffc800"/></svg>`,
         };
 
         const AQI_ACTION_ICONS = {
@@ -293,6 +306,7 @@
             home: `<svg viewBox="0 0 110 110"><path d="M15 60 55 25 95 60v30H15Z" fill="#000"/><rect x="40" y="62" width="30" height="28" rx="4" fill="#ffc800"/><rect x="53" y="68" width="10" height="22" fill="#000"/></svg>`,
             breeze: `<svg viewBox="0 0 110 110"><path d="M20 46h52a10 10 0 1 0-10-10" stroke="#000" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M20 70h58a10 10 0 1 1-10 10" stroke="#ffc800" stroke-width="8" fill="none" stroke-linecap="round"/></svg>`,
             smile: `<svg viewBox="0 0 110 110"><circle cx="55" cy="55" r="40" fill="#ffc800" stroke="#000" stroke-width="6"/><circle cx="40" cy="45" r="6" fill="#000"/><circle cx="70" cy="45" r="6" fill="#000"/><path d="M38 68c10 10 24 10 34 0" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/></svg>`,
+            water: `<svg viewBox="0 0 110 110"><path d="M55 10c0 0-35 40-35 60c0 20 15 35 35 35s35-15 35-35c0-20-35-60-35-60z" fill="#ffc800" stroke="#000" stroke-width="6"/><path d="M40 70c5-5 15-5 20 0" stroke="#000" stroke-width="4" stroke-linecap="round" fill="none"/><ellipse cx="55" cy="85" rx="20" ry="8" fill="#000" opacity="0.2"/></svg>`,
         };
 
         function setIcon(targetId, svgMarkup) {
@@ -421,9 +435,10 @@
             setIcon('weather-hero-icon', WEATHER_ACTION_ICONS[weatherAction.iconKey] ?? WEATHER_ACTION_ICONS.sunny);
 
             const pm25 = Math.round(aqiData.list?.[0]?.components?.pm2_5 ?? FALLBACK_AQI.list[0].components.pm2_5);
-            const aqiAction = pickAQIAction(pm25);
+            const baseAqiAction = pickAQIAction(pm25);
+            const aqiAction = getAqiActionForWeather(baseAqiAction, temp);
 
-            updateAQIGauge(pm25, aqiAction);
+            updateAQIGauge(pm25, baseAqiAction);
             document.getElementById('aqi-action-text').textContent = aqiAction.action.toUpperCase();
             setIcon('aqi-action-icon', AQI_ACTION_ICONS[aqiAction.iconKey] ?? AQI_ACTION_ICONS.mask);
 

@@ -105,3 +105,12 @@ Group 80x: Clouds
  04n
 804	Clouds	overcast clouds: 85-100%	 04d
  04n
+
+
+
+/* Group 3 */
+
+position: absolute;
+width: 800px;
+height: 480px;
+
