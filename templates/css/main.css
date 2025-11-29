@@ -358,8 +358,8 @@ body {
   background-size: cover;
   opacity: 1;
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: -10px;
+  left: -10px;
   overflow: hidden;
 }
 .v76_9 {

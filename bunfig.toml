@@ -1,0 +1,19 @@
+# Bun configuration for Weather & AQI Dashboard
+# https://bun.sh/docs/runtime/bunfig
+
+[serve.static]
+# Inline environment variables with PUBLIC_ prefix
+env = "PUBLIC_*"
+
+# Development server port
+port = 3000
+
+[build]
+# Output directory for production builds
+outdir = "./dist"
+
+# Enable minification for production
+minify = true
+
+# Define environment variables to inline
+define = { "process.env.NODE_ENV" = "\"production\"" }

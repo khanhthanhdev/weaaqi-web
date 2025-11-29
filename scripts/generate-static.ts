@@ -13,8 +13,8 @@ import { existsSync } from 'fs';
 const CONFIG = {
     lat: 21.0285,
     lon: 105.8542,
-    locationLabel: 'HANOI, VN',
-    quote: "I don't wish for an easy life, I wish to have strength to conquer challenges",
+    locationLabel: 'HANOI, VIETNAM',
+    quote: "A quiet sea never made a skilled sailor.",
     refreshInterval: 15 * 60 * 1000, // 15 minutes in milliseconds
     outputDir: './dist',
     templateFile: './templates/index.template.html',
@@ -22,42 +22,53 @@ const CONFIG = {
 
 // Weather action rules
 const WEATHER_ACTIONS = [
-    { tempMax: 5, humidityMin: 0, weatherCodes: [511, 600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622], action: "Stay warm, have warm tea. Extreme cold.", condition: "Severe Winter Weather", iconKey: "cold" },
-    { tempMax: 5, humidityMin: 0, weatherCodes: [800, 801, 802, 803, 804], action: "Stay warm, have warm tea.", condition: "Freezing Cold", iconKey: "cold" },
-    { tempMax: 10, humidityMin: 0, weatherCodes: null, action: "Warm tea recommended. Stay cozy.", condition: "Cold", iconKey: "tea" },
-    { tempMax: 15, humidityMin: 70, weatherCodes: null, action: "Wear warm layers. Stay dry.", condition: "Chilly & Damp", iconKey: "warm" },
-    { tempMin: 35, humidityMin: 50, weatherCodes: null, action: "Wear sunglasses, stay hydrated.", condition: "Very Hot", iconKey: "sunglasses" },
-    { tempMin: 30, humidityMin: 75, weatherCodes: null, action: "Wear sunglasses, drink water often.", condition: "Extreme Humidity/Muggy", iconKey: "sunglasses" },
-    { tempMin: 30, humidityMin: 50, weatherCodes: null, action: "Wear sunglasses, drink water.", condition: "Very Hot & Humid", iconKey: "sunglasses" },
-    { tempMin: 30, humidityMax: 40, weatherCodes: null, action: "Wear sunglasses, hydrate constantly.", condition: "Hot & Dry", iconKey: "sunglasses" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [200, 201, 202, 210, 211, 212, 221, 230, 231, 232], action: "Bring umbrella. Severe T-Storm.", condition: "Thunderstorm", iconKey: "umbrella" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [502, 503, 504, 522], action: "Bring umbrella. Heavy rain.", condition: "Heavy Rain", iconKey: "umbrella" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [300, 301, 302, 310, 311, 312, 313, 314, 321, 500, 501, 520, 521, 531], action: "Bring umbrella.", condition: "Rain/Drizzle", iconKey: "umbrella" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [701, 711, 721, 741], action: "Low visibility, wear mask if smoky.", condition: "Mist/Fog/Haze", iconKey: "haze" },
-    { tempMin: 25, tempMax: 35, humidityMax: 40, weatherCodes: [800, 801], action: "Wear sunglasses. Great day!", condition: "Sunny", iconKey: "sunglasses" },
-    { tempMin: 15, tempMax: 30, humidityMax: 40, weatherCodes: null, action: "Enjoy outdoors, stay hydrated.", condition: "Pleasant & Dry", iconKey: "sunny" },
-    { tempMin: 15, tempMax: 30, humidityMin: 70, weatherCodes: null, action: "Comfortable day. Light walk.", condition: "Warm & Humid", iconKey: "sunny" },
-    { tempMin: 15, tempMax: 30, humidityMin: 41, humidityMax: 69, weatherCodes: null, action: "Perfect weather! Enjoy!", condition: "Ideal Comfort", iconKey: "sunny" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [800, 801, 802, 803, 804], action: "Standard day. Check UV index.", condition: "Clear/Cloudy Sky", iconKey: "sunny" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: null, action: "Enjoy the day.", condition: "Comfortable Day", iconKey: "sunny" },
+    { tempMax: 5, humidityMin: 0, weatherCodes: [511, 600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622], action: truncateText("Stay warm", 2), condition: truncateText("Severe Winter Weather", 2), iconKey: "cold" },
+    { tempMax: 5, humidityMin: 0, weatherCodes: [800, 801, 802, 803, 804], action: truncateText("Stay warm", 2), condition: truncateText("Freezing Cold", 2), iconKey: "cold" },
+    { tempMax: 10, humidityMin: 0, weatherCodes: null, action: truncateText("Warm tea", 2), condition: truncateText("Cold", 2), iconKey: "tea" },
+    { tempMax: 15, humidityMin: 70, weatherCodes: null, action: truncateText("Wear layers", 2), condition: truncateText("Chilly & Damp", 2), iconKey: "warm" },
+    { tempMin: 35, humidityMin: 50, weatherCodes: null, action: truncateText("Stay hydrated", 2), condition: truncateText("Very Hot", 2), iconKey: "sunglasses" },
+    { tempMin: 30, humidityMin: 75, weatherCodes: null, action: truncateText("Drink water", 2), condition: truncateText("Extreme Humidity", 2), iconKey: "sunglasses" },
+    { tempMin: 30, humidityMin: 50, weatherCodes: null, action: truncateText("Stay cool", 2), condition: truncateText("Very Hot", 2), iconKey: "sunglasses" },
+    { tempMin: 30, humidityMax: 40, weatherCodes: null, action: truncateText("Hydrate well", 2), condition: truncateText("Hot & Dry", 2), iconKey: "sunglasses" },
+    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [200, 201, 202, 210, 211, 212, 221, 230, 231, 232], action: truncateText("Take shelter", 2), condition: truncateText("Thunderstorm", 2), iconKey: "umbrella" },
+    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [502, 503, 504, 522], action: truncateText("Heavy rain", 2), condition: truncateText("Heavy Rain", 2), iconKey: "umbrella" },
+    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [300, 301, 302, 310, 311, 312, 313, 314, 321, 500, 501, 520, 521, 531], action: truncateText("Bring umbrella", 2), condition: truncateText("Rain/Drizzle", 2), iconKey: "umbrella" },
+    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [701, 711, 721, 741], action: truncateText("Wear mask", 2), condition: truncateText("Mist/Fog/Haze", 2), iconKey: "haze" },
+    { tempMin: 25, tempMax: 35, humidityMax: 40, weatherCodes: [800, 801], action: truncateText("Great day", 2), condition: truncateText("Sunny", 2), iconKey: "sunglasses" },
+    { tempMin: 15, tempMax: 30, humidityMax: 40, weatherCodes: null, action: truncateText("Enjoy outdoors", 2), condition: truncateText("Pleasant & Dry", 2), iconKey: "sunny" },
+    { tempMin: 15, tempMax: 30, humidityMin: 70, weatherCodes: null, action: truncateText("Light walk", 2), condition: truncateText("Warm & Humid", 2), iconKey: "sunny" },
+    { tempMin: 15, tempMax: 30, humidityMin: 41, humidityMax: 69, weatherCodes: null, action: truncateText("Perfect weather", 2), condition: truncateText("Ideal Comfort", 2), iconKey: "sunny" },
+    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [800, 801, 802, 803, 804], action: truncateText("Check UV", 2), condition: truncateText("Clear/Cloudy Sky", 2), iconKey: "sunny" },
+    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: null, action: truncateText("Enjoy day", 2), condition: truncateText("Comfortable Day", 2), iconKey: "sunny" },
 ];
 
 const AQI_ACTIONS = [
-    { max: 12, status: 'GOOD', action: 'Enjoy the fresh air', iconKey: 'smile', color: '#ffc800' },
-    { max: 35.4, status: 'MODERATE', action: 'Limit long outdoor exposure', iconKey: 'breeze', color: '#ffc800' },
-    { max: 55.4, status: 'UNHEALTHY (SG)', action: 'Mask up if sensitive', iconKey: 'mask', color: '#ffc800' },
-    { max: 150.4, status: 'UNHEALTHY', action: 'Wear mask outdoors', iconKey: 'mask', color: '#ffc800' },
-    { max: 250.4, status: 'VERY UNHEALTHY', action: 'Stay indoors when possible', iconKey: 'home', color: '#ffc800' },
-    { max: Infinity, status: 'HAZARDOUS', action: 'Avoid outdoor activity', iconKey: 'mask', color: '#ffc800' },
+    { max: 12, status: truncateText('GOOD', 2), action: truncateText('Fresh air', 2), iconKey: 'smile', color: '#ffc800' },
+    { max: 35.4, status: truncateText('MODERATE', 2), action: truncateText('Limit exposure', 2), iconKey: 'breeze', color: '#ffc800' },
+    { max: 55.4, status: truncateText('UNHEALTHY (SG)', 2), action: truncateText('Mask up', 2), iconKey: 'mask', color: '#ffc800' },
+    { max: 150.4, status: truncateText('UNHEALTHY', 2), action: truncateText('Wear mask', 2), iconKey: 'mask', color: '#ffc800' },
+    { max: 250.4, status: truncateText('VERY UNHEALTHY', 2), action: truncateText('Stay indoors', 2), iconKey: 'home', color: '#ffc800' },
+    { max: Infinity, status: truncateText('HAZARDOUS', 2), action: truncateText('Avoid outdoors', 2), iconKey: 'mask', color: '#ffc800' },
 ];
 
-// SVG Icons
 const AQI_ACTION_ICONS: Record<string, string> = {
     mask: `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" fill="#ffc800" stroke="#000" stroke-width="6"/><path d="M44 48c2 6 8 6 10 0" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M70 48c2 6 8 6 10 0" stroke="#000" stroke-width="6" stroke-linecap="round"/><rect x="32" y="56" width="56" height="26" rx="8" fill="#fff" stroke="#000" stroke-width="6"/><path d="M32 66c-6 0-12-4-12-10" stroke="#000" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M88 66c6 0 12-4 12-10" stroke="#000" stroke-width="6" stroke-linecap="round" fill="none"/><rect x="42" y="62" width="36" height="10" rx="4" fill="#000"/><path d="M42 72c8 6 20 6 28 0" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/></svg>`,
     home: `<svg viewBox="0 0 110 110"><path d="M15 60 55 25 95 60v30H15Z" fill="#000"/><rect x="40" y="62" width="30" height="28" rx="4" fill="#ffc800"/><rect x="53" y="68" width="10" height="22" fill="#000"/></svg>`,
     breeze: `<svg viewBox="0 0 110 110"><path d="M20 46h52a10 10 0 1 0-10-10" stroke="#000" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M20 70h58a10 10 0 1 1-10 10" stroke="#ffc800" stroke-width="8" fill="none" stroke-linecap="round"/></svg>`,
     smile: `<svg viewBox="0 0 110 110"><circle cx="55" cy="55" r="40" fill="#ffc800" stroke="#000" stroke-width="6"/><circle cx="40" cy="45" r="6" fill="#000"/><circle cx="70" cy="45" r="6" fill="#000"/><path d="M38 68c10 10 24 10 34 0" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/></svg>`,
     water: `<svg viewBox="0 0 110 110"><path d="M55 10c0 0-35 40-35 60c0 20 15 35 35 35s35-15 35-35c0-20-35-60-35-60z" fill="#ffc800" stroke="#000" stroke-width="6"/><path d="M40 70c5-5 15-5 20 0" stroke="#000" stroke-width="4" stroke-linecap="round" fill="none"/><ellipse cx="55" cy="85" rx="20" ry="8" fill="#000" opacity="0.2"/></svg>`,
+};
+
+// Local icon mapping
+const ICON_MAPPING: Record<string, string> = {
+    cold: 'icons/snowflake.svg',
+    tea: 'icons/tea-cup.svg',
+    warm: 'icons/warm-clothes.svg',
+    sunglasses: 'icons/sunglasses.svg',
+    umbrella: 'icons/rain-storm.svg',
+    haze: 'icons/photo.png', // Assuming photo is used for haze (mask image)
+    sunny: 'icons/sun.svg',
+    mask: 'icons/photo.png', // Explicitly add mask mapping to photo.png
 };
 
 interface WeatherData {
@@ -172,6 +183,14 @@ function formatDate(date: Date): string {
     return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
+function truncateText(text: string, maxWords: number): string {
+    const words = text.split(' ');
+    if (words.length > maxWords) {
+        return words.slice(0, maxWords).join(' ');
+    }
+    return text;
+}
+
 // Convert m/s to km/h
 function kmhFromMs(speedMs: number): number {
     return Math.round(speedMs * 3.6);
@@ -222,6 +241,14 @@ async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<s
         template = await readFile('./index.html', 'utf8');
     }
 
+    // Determine weather icon URL
+    let weatherIconUrl: string;
+    if (weatherAction?.iconKey && ICON_MAPPING[weatherAction.iconKey]) {
+        weatherIconUrl = ICON_MAPPING[weatherAction.iconKey];
+    } else {
+        weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+    }
+
     // Replace placeholders in template
     const replacements: Record<string, string> = {
         '{{DATE}}': dateStr,
@@ -229,10 +256,11 @@ async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<s
         '{{CONDITION}}': weatherAction?.condition?.toUpperCase() || description,
         '{{TEMPERATURE}}': `${temp}°C`,
         '{{HERO_ACTION}}': weatherAction?.action?.toUpperCase() || '',
-        '{{WEATHER_ICON}}': `https://openweathermap.org/img/wn/${weatherIcon}@2x.png`,
-        '{{HUMIDITY}}': `${humidity}%`,
-        '{{FEELS_LIKE}}': `${feelsLike}°C`,
-        '{{WIND_SPEED}}': `${windSpeed} km/h`,
+        '{{WEATHER_ICON}}': weatherIconUrl,
+        '{{HUMIDITY}}': `${humidity} %`,
+        '{{FEELS_LIKE}}': `${feelsLike}° C`,
+        '{{WIND_VALUE}}': String(windSpeed),
+        '{{WIND_UNIT}}': 'km/h',
         '{{AQI_VALUE}}': String(pm25),
         '{{AQI_STATUS}}': baseAqiAction.status,
         '{{AQI_ACTION}}': aqiAction.action.toUpperCase(),
@@ -243,6 +271,7 @@ async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<s
         '{{QUOTE}}': CONFIG.quote,
         '{{LAST_UPDATED}}': timeStr,
     };
+
 
     let html = template;
     for (const [placeholder, value] of Object.entries(replacements)) {
@@ -277,8 +306,9 @@ async function copyDirectory(source: string, destination: string): Promise<void>
 
 async function copyStaticAssets(): Promise<void> {
     const assets = [
-        { from: './figma-to-html/css', to: join(CONFIG.outputDir, 'css') },
+        { from: './templates/css', to: join(CONFIG.outputDir, 'css') },
         { from: './figma-to-html/images', to: join(CONFIG.outputDir, 'images') },
+        { from: './icons', to: join(CONFIG.outputDir, 'icons') },
     ];
 
     for (const asset of assets) {
