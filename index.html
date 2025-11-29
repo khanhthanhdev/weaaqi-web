@@ -9,8 +9,8 @@
         :root {
             --yellow: #ffc800;
             --black: #000000;
-            --gray: #f7f7f7;
-            --border: #e6e6e6;
+            --gray: #ffffff;
+            --border: #000000;
             --card: #ffffff;
         }
         * { box-sizing: border-box; }
@@ -30,7 +30,6 @@
             background: #fff;
             border: 1px solid var(--border);
             border-radius: 8px;
-            box-shadow: 0 14px 32px rgba(0,0,0,0.16);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -64,7 +63,12 @@
         main.main {
             flex: 1;
             display: grid;
-            grid-template-columns: 1.25fr 0.9fr;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: 200px 1fr 1fr;
+            grid-template-areas:
+                "hero hero hero gauge"
+                "stat1 stat2 stat3 aqiact"
+                "action action action .";
             gap: 12px;
             padding: 12px 16px;
             min-height: 0;
@@ -74,14 +78,17 @@
             border: 2px solid #000;
             border-radius: 12px;
             padding: 12px;
-            box-shadow: 0 8px 18px rgba(0,0,0,0.05);
-        }
-        .weather {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            min-height: 0;
+            justify-content: center;
         }
+        .hero { grid-area: hero; }
+        .weather-action { grid-area: action; }
+        .aqi-gauge { grid-area: gauge; }
+        .stat-humidity { grid-area: stat1; }
+        .stat-feels { grid-area: stat2; }
+        .stat-wind { grid-area: stat3; }
+        .aqi-action { grid-area: aqiact; }
         .hero {
             display: grid;
             grid-template-columns: auto 1fr;
@@ -102,14 +109,12 @@
         .hero-text .temperature { font-size: 60px; font-weight: 800; line-height: 1; }
 
         .weather-action { text-align: center; }
+        .hero-text .hero-action { font-size: 18px; font-weight: 700; color: var(--yellow); margin-top: 6px; }
+        /* hide the old action card since the hero now contains the main action */
+        .weather-action { display: none; }
         .weather-action .card-label { font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
         .weather-action .card-title { font-size: 25px; font-weight: 800; margin-top: 2px; line-height: 1.3; }
 
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
         .stat-card {
             background: #000;
             border-radius: 12px;
@@ -119,29 +124,28 @@
             grid-template-columns: auto 1fr;
             gap: 10px;
             align-items: center;
+            height: 100%;
         }
         .stat-card svg { width: 30px; height: 30px; }
         .stat-label { color: var(--yellow); font-size: 13px; font-weight: 700; }
         .stat-value { font-size: 20px; font-weight: 800; }
-
-        .aqi { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
-        .aqi-gauge { display: grid; place-items: center; padding: 12px; }
-        .aqi-gauge svg { width: 200px; height: 200px; }
+        .aqi-gauge { display: grid; place-items: center; padding: 0; }
+        .aqi-gauge svg { width: 100%; height: 100%; }
         .aqi-action { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
-        .aqi-icon { width: 64px; height: 64px; display: grid; place-items: center; }
-        .aqi-icon svg { width: 64px; height: 64px; }
-        .aqi-action-text { font-size: 22px; font-weight: 800; line-height: 1.2; }
+        .aqi-icon { width: 80px; height: 80px; display: grid; place-items: center; }
+        .aqi-icon svg { width: 80px; height: 80px; }
+        .aqi-action-text { font-size: 20px; font-weight: 800; line-height: 1.2; }
 
         footer.footer {
-            background: #f7f7f7;
+            background: #ffffff;
             border-top: 1px solid var(--border);
             padding: 6px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 12px;
-            color: #555;
-            min-height: 36px;
+            color: #000000;
+            min-height:70px;
             gap: 12px;
             flex-wrap: wrap;
         }
@@ -162,69 +166,65 @@
         </header>
 
         <main class="main">
-            <section class="weather">
-                <div class="hero card">
-                    <div id="weather-hero-icon" class="hero-icon"></div>
-                    <div class="hero-text">
+            <div class="hero card">
+                <div id="weather-hero-icon" class="hero-icon"></div>
+                <div class="hero-text">
                         <div id="condition-main" class="condition">RAIN/STORM</div>
                         <div id="temp-main" class="temperature">24°C</div>
-                    </div>
+                        <div id="hero-action" class="hero-action">PERFECT WEATHER! ENJOY!</div>
                 </div>
+            </div>
 
-                <div class="weather-action card">
-                    <div id="weather-action-condition" class="card-label">RAIN/STORM</div>
-                    <div id="weather-action-text" class="card-title">BRING UMBRELLA</div>
-                </div>
+            <div class="aqi-gauge card">
+                <svg viewBox="-120 -120 240 240" aria-labelledby="aqi-title">
+                    <title id="aqi-title">Air Quality Gauge</title>
+                    <circle cx="0" cy="0" r="94" stroke="#000" stroke-width="26" fill="none"/>
+                    <circle id="aqi-arc-active" cx="0" cy="0" r="94" stroke="var(--yellow)" stroke-width="26" fill="none" stroke-linecap="round" stroke-dasharray="254 590" transform="rotate(-90)"/>
+                    <circle cx="0" cy="0" r="78" fill="#000"/>
+                    <text x="0" y="-25" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">AQI</text>
+                    <text id="aqi-label" x="0" y="13" text-anchor="middle" fill="var(--yellow)" font-size="44" font-weight="800">155</text>
+                    <text id="aqi-status" x="0" y="33" text-anchor="middle" fill="#fff" font-size="14" font-weight="800">NORMAL</text>
+                </svg>
+            </div>
 
-                <div class="stats-row">
-                    <div class="stat-card">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2S5 11 5 15a7 7 0 0 0 14 0C19 11 12 2 12 2Z" fill="var(--yellow)" stroke="#000" stroke-width="1"/></svg>
-                        <div class="stat-text">
-                            <div class="stat-label">Humidity</div>
-                            <div id="humidity" class="stat-value">92%</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M14 5a2 2 0 1 0-4 0v7.5a4 4 0 1 0 4 0Z" stroke="var(--yellow)" stroke-width="2" fill="none"/>
-                            <circle cx="12" cy="16" r="2.5" fill="var(--yellow)"/>
-                            <line x1="12" y1="5" x2="12" y2="10" stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        <div class="stat-text">
-                            <div class="stat-label">Feels Like</div>
-                            <div id="feels-like" class="stat-value">28°C</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M4 9h11a3 3 0 1 0-3-3" stroke="var(--yellow)" stroke-width="2" fill="none" stroke-linecap="round"/>
-                            <path d="M4 15h13a2 2 0 1 1-2 2" stroke="var(--yellow)" stroke-width="2" fill="none" stroke-linecap="round"/>
-                        </svg>
-                        <div class="stat-text">
-                            <div class="stat-label">Wind</div>
-                            <div id="wind-speed" class="stat-value">12 km/h</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <div class="weather-action card">
+                <div id="weather-action-condition" class="card-label">RAIN/STORM</div>
+                <div id="weather-action-text" class="card-title">BRING UMBRELLA</div>
+            </div>
 
-            <section class="aqi">
-                <div class="aqi-gauge card">
-                    <svg viewBox="-120 -120 240 240" aria-labelledby="aqi-title">
-                        <title id="aqi-title">Air Quality Gauge</title>
-                        <circle cx="0" cy="0" r="94" stroke="#000" stroke-width="26" fill="none"/>
-                        <circle id="aqi-arc-active" cx="0" cy="0" r="94" stroke="var(--yellow)" stroke-width="26" fill="none" stroke-linecap="round" stroke-dasharray="254 590" transform="rotate(-90)"/>
-                        <circle cx="0" cy="0" r="78" fill="#000"/>
-                        <text x="0" y="-14" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">AQI</text>
-                        <text id="aqi-label" x="0" y="34" text-anchor="middle" fill="var(--yellow)" font-size="58" font-weight="800">155</text>
-                        <text id="aqi-status" x="0" y="68" text-anchor="middle" fill="#fff" font-size="22" font-weight="800">UNHEALTHY</text>
-                    </svg>
+            <div class="stat-card stat-humidity">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2S5 11 5 15a7 7 0 0 0 14 0C19 11 12 2 12 2Z" fill="var(--yellow)" stroke="#000" stroke-width="1"/></svg>
+                <div class="stat-text">
+                    <div class="stat-label">Humidity</div>
+                    <div id="humidity" class="stat-value">92%</div>
                 </div>
-                <div class="aqi-action card">
-                    <div id="aqi-action-icon" class="aqi-icon"></div>
-                    <div id="aqi-action-text" class="aqi-action-text">WEAR MASK</div>
+            </div>
+            <div class="stat-card stat-feels">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 5a2 2 0 1 0-4 0v7.5a4 4 0 1 0 4 0Z" stroke="var(--yellow)" stroke-width="2" fill="none"/>
+                    <circle cx="12" cy="16" r="2.5" fill="var(--yellow)"/>
+                    <line x1="12" y1="5" x2="12" y2="10" stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <div class="stat-text">
+                    <div class="stat-label">Feels Like</div>
+                    <div id="feels-like" class="stat-value">28°C</div>
                 </div>
-            </section>
+            </div>
+            <div class="stat-card stat-wind">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9h11a3 3 0 1 0-3-3" stroke="var(--yellow)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path d="M4 15h13a2 2 0 1 1-2 2" stroke="var(--yellow)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                </svg>
+                <div class="stat-text">
+                    <div class="stat-label">Wind</div>
+                    <div id="wind-speed" class="stat-value">12 km/h</div>
+                </div>
+            </div>
+
+            <div class="aqi-action card">
+                <div id="aqi-action-icon" class="aqi-icon"></div>
+                <div id="aqi-action-text" class="aqi-action-text">WEAR MASK</div>
+            </div>
         </main>
 
         <footer class="footer">
@@ -275,12 +275,12 @@
         ];
 
         const AQI_ACTIONS = [
-            { max: 12, status: 'GOOD', action: 'Enjoy the fresh air', iconKey: 'smile', color: '#00E400' },
-            { max: 35.4, status: 'MODERATE', action: 'Limit long outdoor exposure', iconKey: 'breeze', color: '#FFFF00' },
-            { max: 55.4, status: 'UNHEALTHY (SG)', action: 'Mask up if sensitive', iconKey: 'mask', color: '#FF7E00' },
-            { max: 150.4, status: 'UNHEALTHY', action: 'Wear mask outdoors', iconKey: 'mask', color: '#FF0000' },
-            { max: 250.4, status: 'VERY UNHEALTHY', action: 'Stay indoors when possible', iconKey: 'home', color: '#8F3F97' },
-            { max: Infinity, status: 'HAZARDOUS', action: 'Avoid outdoor activity', iconKey: 'mask', color: '#7E0023' },
+            { max: 12, status: 'GOOD', action: 'Enjoy the fresh air', iconKey: 'smile', color: '#ffc800' },
+            { max: 35.4, status: 'MODERATE', action: 'Limit long outdoor exposure', iconKey: 'breeze', color: '#ffc800' },
+            { max: 55.4, status: 'UNHEALTHY (SG)', action: 'Mask up if sensitive', iconKey: 'mask', color: '#ffc800' },
+            { max: 150.4, status: 'UNHEALTHY', action: 'Wear mask outdoors', iconKey: 'mask', color: '#ffc800' },
+            { max: 250.4, status: 'VERY UNHEALTHY', action: 'Stay indoors when possible', iconKey: 'home', color: '#ffc800' },
+            { max: Infinity, status: 'HAZARDOUS', action: 'Avoid outdoor activity', iconKey: 'mask', color: '#ffc800' },
         ];
 
         function getAqiActionForWeather(aqiAction, temp) {
@@ -309,9 +309,16 @@
             water: `<svg viewBox="0 0 110 110"><path d="M55 10c0 0-35 40-35 60c0 20 15 35 35 35s35-15 35-35c0-20-35-60-35-60z" fill="#ffc800" stroke="#000" stroke-width="6"/><path d="M40 70c5-5 15-5 20 0" stroke="#000" stroke-width="4" stroke-linecap="round" fill="none"/><ellipse cx="55" cy="85" rx="20" ry="8" fill="#000" opacity="0.2"/></svg>`,
         };
 
-        function setIcon(targetId, svgMarkup) {
+        function setIcon(targetId, iconCode) {
             const container = document.getElementById(targetId);
-            if (container) container.innerHTML = svgMarkup;
+            if (container) {
+                if (iconCode && iconCode.length < 10) { // API weather icon code
+                    const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+                    container.innerHTML = `<img src="${iconUrl}" alt="Weather icon" style="width: 100%; height: 100%; object-fit: contain;">`;
+                } else { // SVG markup for AQI action icons
+                    container.innerHTML = iconCode;
+                }
+            }
         }
 
         function updateCurrentDate() {
@@ -416,25 +423,29 @@
         }
 
         function renderDashboard(weatherData, aqiData, { useCurrentTime = true } = {}) {
-            const description = (weatherData.weather?.[0]?.description ?? 'Rain/Storm').toUpperCase();
-            const temp = Math.round(weatherData.main?.temp ?? FALLBACK_WEATHER.main.temp);
-            const feelsLike = Math.round(weatherData.main?.feels_like ?? FALLBACK_WEATHER.main.feels_like);
-            const humidity = weatherData.main?.humidity ?? FALLBACK_WEATHER.main.humidity;
-            const windSpeed = kmhFromMs(weatherData.wind?.speed ?? FALLBACK_WEATHER.wind.speed);
-            const weatherId = weatherData.weather?.[0]?.id ?? FALLBACK_WEATHER.weather[0].id;
+            const description = weatherData.weather?.[0]?.description?.toUpperCase() || 'UNKNOWN';
+            const temp = Math.round(weatherData.main?.temp || 0);
+            const feelsLike = Math.round(weatherData.main?.feels_like || temp);
+            const humidity = weatherData.main?.humidity || 0;
+            const windSpeed = kmhFromMs(weatherData.wind?.speed || 0);
+            const weatherId = weatherData.weather?.[0]?.id || 800;
+            const weatherIcon = weatherData.weather?.[0]?.icon || '01d';
 
-            document.getElementById('condition-main').textContent = description;
+            // Show higher-level condition (e.g. 'Ideal Comfort') in hero when available
+            const weatherAction = pickWeatherAction(temp, humidity, weatherId);
+            document.getElementById('condition-main').textContent = (weatherAction?.condition?.toUpperCase()) || description;
             document.getElementById('temp-main').textContent = `${temp}°C`;
             document.getElementById('feels-like').textContent = `${feelsLike}°C`;
             document.getElementById('humidity').textContent = `${humidity}%`;
             document.getElementById('wind-speed').textContent = `${windSpeed} km/h`;
 
-            const weatherAction = pickWeatherAction(temp, humidity, weatherId);
-            document.getElementById('weather-action-condition').textContent = weatherAction.condition.toUpperCase();
-            document.getElementById('weather-action-text').textContent = weatherAction.action.toUpperCase();
-            setIcon('weather-hero-icon', WEATHER_ACTION_ICONS[weatherAction.iconKey] ?? WEATHER_ACTION_ICONS.sunny);
+            // Move the weather action up into the hero (avoid duplicating in the old action card)
+            document.getElementById('hero-action').textContent = (weatherAction?.action?.toUpperCase()) || '';
+            document.getElementById('weather-action-condition').textContent = '';
+            document.getElementById('weather-action-text').textContent = '';
+            setIcon('weather-hero-icon', weatherIcon);
 
-            const pm25 = Math.round(aqiData.list?.[0]?.components?.pm2_5 ?? FALLBACK_AQI.list[0].components.pm2_5);
+            const pm25 = Math.round(aqiData.list?.[0]?.components?.pm2_5 || 0);
             const baseAqiAction = pickAQIAction(pm25);
             const aqiAction = getAqiActionForWeather(baseAqiAction, temp);
 
@@ -457,25 +468,25 @@
                     weatherData = getCachedData(WEATHER_CACHE_KEY);
                     if (!weatherData) weatherData = await fetchWeatherData(key);
                 } catch (error) {
-                    console.error('Weather fetch failed, using fallback', error);
+                    console.error('Weather fetch failed:', error);
                 }
 
                 try {
                     aqiData = getCachedData(AQI_CACHE_KEY);
                     if (!aqiData) aqiData = await fetchAQIData(key);
                 } catch (error) {
-                    console.error('AQI fetch failed, using fallback', error);
+                    console.error('AQI fetch failed:', error);
                 }
             }
 
+            // Only use fallback if absolutely no data available
             if (!weatherData) weatherData = FALLBACK_WEATHER;
             if (!aqiData) aqiData = FALLBACK_AQI;
 
-            const isFallback = weatherData === FALLBACK_WEATHER || aqiData === FALLBACK_AQI;
-            renderDashboard(weatherData, aqiData, { useCurrentTime: !isFallback });
+            renderDashboard(weatherData, aqiData, { useCurrentTime: true });
         }
 
-        setIcon('weather-hero-icon', WEATHER_ACTION_ICONS.umbrella);
+        setIcon('weather-hero-icon', '01d');
         setIcon('aqi-action-icon', AQI_ACTION_ICONS.mask);
 
         updateCurrentDate();
