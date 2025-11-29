@@ -8,7 +8,7 @@
     "dev:html": "bun ./index.html",
     "generate": "bun run scripts/generate-static.ts",
     "generate:watch": "bun run scripts/generate-static.ts --watch",
-    "build": "bun run scripts/generate-static.ts && bun build ./dist/index.html --outdir=dist --minify",
+    "build": "bun run scripts/generate-static.ts && bun build ./dist/index.html --outdir=dist --minify && cp -r ./figma-to-html/images dist/ && cp -r ./icons dist/",
     "start": "bun run scripts/server.ts",
     "preview": "bun ./dist/index.html"
   },
