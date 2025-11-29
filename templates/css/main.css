@@ -14,7 +14,7 @@ body {
 .v36_37 {
   width: 800px;
   height: 480px;
-  background: url("../images/v36_37.png");
+  background: rgba(255,255,255,1);
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
