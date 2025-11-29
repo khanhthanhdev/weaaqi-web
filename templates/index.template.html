@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="900" />
+    <title>E-Paper Weather Dashboard</title>
+    <link rel="stylesheet" href="./css/main.css" />
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo"><span>Weather & AQI</span></div>
+            <div class="header-meta">
+                <span id="current-date">{{DATE}}</span>
+                <span>|</span>
+                <span id="header-location">{{LOCATION}}</span>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="hero card">
+                <div id="weather-hero-icon" class="hero-icon">
+                    <img src="{{WEATHER_ICON}}" alt="Weather icon" />
+                </div>
+                <div class="hero-text">
+                    <div id="condition-main" class="condition">{{CONDITION}}</div>
+                    <div id="temp-main" class="temperature">{{TEMPERATURE}}</div>
+                    <div id="hero-action" class="hero-action">{{HERO_ACTION}}</div>
+                </div>
+            </div>
+
+            <div class="aqi-gauge card">
+                <svg viewBox="-120 -120 240 240" aria-labelledby="aqi-title">
+                    <title id="aqi-title">Air Quality Gauge</title>
+                    <circle cx="0" cy="0" r="94" stroke="#000" stroke-width="26" fill="none"></circle>
+                    <circle id="aqi-arc-active" cx="0" cy="0" r="94" stroke="{{AQI_COLOR}}" stroke-width="26" fill="none" stroke-linecap="round" stroke-dasharray="{{AQI_ARC_LENGTH}} {{AQI_CIRCUMFERENCE}}" transform="rotate(-90)"></circle>
+                    <circle cx="0" cy="0" r="78" fill="#000"></circle>
+                    <text x="0" y="-25" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">AQI</text>
+                    <text id="aqi-label" x="0" y="13" text-anchor="middle" fill="{{AQI_COLOR}}" font-size="44" font-weight="800">{{AQI_VALUE}}</text>
+                    <text id="aqi-status" x="0" y="33" text-anchor="middle" fill="#fff" font-size="14" font-weight="800">{{AQI_STATUS}}</text>
+                </svg>
+            </div>
+
+            <div class="weather-action card">
+                <div id="weather-action-condition" class="card-label"></div>
+                <div id="weather-action-text" class="card-title"></div>
+            </div>
+
+            <div class="stat-card stat-humidity">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2S5 11 5 15a7 7 0 0 0 14 0C19 11 12 2 12 2Z" fill="var(--yellow)" stroke="#000" stroke-width="1"></path></svg>
+                <div class="stat-text">
+                    <div class="stat-label">Humidity</div>
+                    <div id="humidity" class="stat-value">{{HUMIDITY}}</div>
+                </div>
+            </div>
+            <div class="stat-card stat-feels">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 5a2 2 0 1 0-4 0v7.5a4 4 0 1 0 4 0Z" stroke="var(--yellow)" stroke-width="2" fill="none"></path>
+                    <circle cx="12" cy="16" r="2.5" fill="var(--yellow)"></circle>
+                    <line x1="12" y1="5" x2="12" y2="10" stroke="var(--yellow)" stroke-width="2" stroke-linecap="round"></line>
+                </svg>
+                <div class="stat-text">
+                    <div class="stat-label">Feels Like</div>
+                    <div id="feels-like" class="stat-value">{{FEELS_LIKE}}</div>
+                </div>
+            </div>
+            <div class="stat-card stat-wind">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9h11a3 3 0 1 0-3-3" stroke="var(--yellow)" stroke-width="2" fill="none" stroke-linecap="round"></path>
+                    <path d="M4 15h13a2 2 0 1 1-2 2" stroke="var(--yellow)" stroke-width="2" fill="none" stroke-linecap="round"></path>
+                </svg>
+                <div class="stat-text">
+                    <div class="stat-label">Wind</div>
+                    <div id="wind-speed" class="stat-value">{{WIND_SPEED}}</div>
+                </div>
+            </div>
+
+            <div class="aqi-action card">
+                <div id="aqi-action-icon" class="aqi-icon">{{AQI_ICON}}</div>
+                <div id="aqi-action-text" class="aqi-action-text">{{AQI_ACTION}}</div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div id="quote-text" class="quote">"{{QUOTE}}"</div>
+            <div id="last-updated" class="updated">Update at: {{LAST_UPDATED}}</div>
+        </footer>
+    </div>
+</body>
+</html>
