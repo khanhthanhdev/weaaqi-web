@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "functions": {
     "scripts/server.ts": {
-      "runtime": "nodejs@20.x"
+      "runtime": "now-node@20.0.0"
     }
   },
   "env": {
