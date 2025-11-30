@@ -1,11 +1,9 @@
 {
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
-  "functions": {
-    "scripts/server.ts": {
-      "runtime": "now-node@20.0.0"
-    }
-  },
+  "rewrites": [
+    { "source": "/api/image", "destination": "/api/image" }
+  ],
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
   }

@@ -13,7 +13,8 @@
     "preview": "bun ./dist/index.html"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@vercel/node": "^5.5.13"
   },
   "author": "",
   "license": "MIT",
