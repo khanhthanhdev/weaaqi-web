@@ -10,6 +10,7 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import nodeHtmlToImage from 'node-html-to-image';
 import { readFileSync } from 'fs';
+import { platform } from 'os';
 
 // Helper function to convert file to data URL
 function fileToDataURL(filePath: string): string {
@@ -386,11 +387,41 @@ async function generate(): Promise<void> {
 
         // Generate PNG image from the HTML
         const imagePath = join(CONFIG.outputDir, 'image.png');
+        
+        let puppeteerArgs: any = {
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        };
+        
+        // Use @sparticuz/chromium for serverless environments (Vercel, etc.)
+        if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+            try {
+                const { default: chromium } = await import('@sparticuz/chromium');
+                puppeteerArgs = {
+                    executablePath: await chromium.executablePath(),
+                    args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-accelerated-2d-canvas',
+                        '--no-first-run',
+                        '--no-zygote',
+                        '--single-process',
+                        '--disable-gpu'
+                    ],
+                };
+            } catch (error) {
+                console.warn('Failed to load @sparticuz/chromium, falling back to default:', error);
+            }
+        }
+        
         const image = await nodeHtmlToImage({
             html: html,
             type: 'png',
-            puppeteerArgs: {
-                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            width: 800,
+            height: 480,
+            puppeteerArgs: puppeteerArgs,
+            beforeScreenshot: async (page) => {
+                await page.setViewport({ width: 800, height: 480 });
             },
         });
         await writeFile(imagePath, image);

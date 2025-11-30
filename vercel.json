@@ -1,4 +1,12 @@
 {
   "buildCommand": "bun run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "functions": {
+    "scripts/server.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "env": {
+    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+  }
 }

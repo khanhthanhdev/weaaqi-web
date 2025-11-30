@@ -18,6 +18,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@sparticuz/chromium": "^141.0.0",
     "node-html-to-image": "^5.0.0"
   }
 }
