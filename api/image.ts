@@ -11,7 +11,7 @@ import {
     formatDate,
     formatTime,
     kmhFromMs,
-} from './weather-utils';
+} from './weather-utils.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
@@ -94,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     left: '667px',
                                     color: '#000',
                                     fontSize: '15px',
-                                    fontWeight: 500,
+                                    fontWeight: 900,
                                 },
                                 children: `Update at: ${timeStr}`,
                             },
@@ -109,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     left: '242px',
                                     color: '#000',
                                     fontSize: '32px',
-                                    fontWeight: 700,
+                                    fontWeight: 900,
                                 },
                                 children: weatherAction?.condition?.toUpperCase() || description,
                             },
@@ -187,7 +187,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     width: '140px',
                                     color: '#FFFF00',
                                     fontSize: '80px',
-                                    fontWeight: 700,
+                                    fontWeight: 900,
                                     textAlign: 'center',
                                     lineHeight: 1,
                                 },
@@ -368,7 +368,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     left: '310px',
                                     color: '#000',
                                     fontSize: '24px',
-                                    fontWeight: 500,
+                                    fontWeight: 900,
                                     fontStyle: 'italic',
                                 },
                                 children: `"${CONFIG.quote}"`,
