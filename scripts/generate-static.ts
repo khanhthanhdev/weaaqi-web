@@ -614,54 +614,73 @@ export async function generate() {
 
         console.log('[generate-static] Converting HTML to PNG...');
         
-        // Ensure HTML body/html are exactly 800x480
-        // Add inline style to body to enforce exact dimensions
-        html = html.replace(
-            /<body[^>]*>/,
-            '<body style="width: 800px; height: 480px; margin: 0; padding: 0; overflow: hidden;">'
-        );
-        
-        // Configure Chromium for Vercel serverless
-        const isVercel = process.env.VERCEL === '1';
-        const chromiumArgs = isVercel
-            ? chromium.args
-            : [
-                  '--no-sandbox',
-                  '--disable-setuid-sandbox',
-                  '--disable-dev-shm-usage',
-                  '--disable-accelerated-2d-canvas',
-                  '--no-first-run',
-                  '--no-zygote',
-                  '--single-process',
-                  '--disable-gpu',
-              ];
-        
-        const executablePath = isVercel ? await chromium.executablePath() : undefined;
-        
-        // Convert HTML to PNG using node-html-to-image
-        const imageBuffer = await nodeHtmlToImage({
-            html: html,
-            type: 'png',
-            quality: 100,
-            puppeteerArgs: {
-                args: chromiumArgs,
-                ...(executablePath && { executablePath }),
-                defaultViewport: {
-                    width: 800,
-                    height: 480,
+        try {
+            // Ensure HTML body/html are exactly 800x480
+            // Add inline style to body to enforce exact dimensions
+            html = html.replace(
+                /<body[^>]*>/,
+                '<body style="width: 800px; height: 480px; margin: 0; padding: 0; overflow: hidden;">'
+            );
+            
+            // Configure Chromium for Vercel serverless
+            const isVercel = process.env.VERCEL === '1';
+            let chromiumArgs: string[];
+            let executablePath: string | undefined;
+            
+            if (isVercel) {
+                try {
+                    chromiumArgs = chromium.args;
+                    executablePath = await chromium.executablePath();
+                } catch (chromiumError) {
+                    // Chromium not available during build - skip image generation
+                    // Images can be generated at runtime via /api/image endpoint
+                    console.warn('[generate-static] Chromium not available during build, skipping image generation.');
+                    console.warn('[generate-static] Images will be generated at runtime via /api/image endpoint.');
+                    throw chromiumError;
+                }
+            } else {
+                chromiumArgs = [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-gpu',
+                ];
+            }
+            
+            // Convert HTML to PNG using node-html-to-image
+            const imageBuffer = await nodeHtmlToImage({
+                html: html,
+                type: 'png',
+                quality: 100,
+                puppeteerArgs: {
+                    args: chromiumArgs,
+                    ...(executablePath && { executablePath }),
+                    defaultViewport: {
+                        width: 800,
+                        height: 480,
+                    },
                 },
-            },
-            waitUntil: 'networkidle0',
-        }) as Buffer;
+                waitUntil: 'networkidle0',
+            }) as Buffer;
 
-        // Save the image
-        const imagePath = join(distDir, 'image.png');
-        // Convert to Uint8Array for Bun.write
-        const buffer = typeof imageBuffer === 'string' 
-            ? new Uint8Array(Buffer.from(imageBuffer, 'base64'))
-            : new Uint8Array(imageBuffer);
-        await Bun.write(imagePath, buffer);
-        console.log(`[generate-static] Image saved to ${imagePath}`);
+            // Save the image
+            const imagePath = join(distDir, 'image.png');
+            // Convert to Uint8Array for Bun.write
+            const buffer = typeof imageBuffer === 'string' 
+                ? new Uint8Array(Buffer.from(imageBuffer, 'base64'))
+                : new Uint8Array(imageBuffer);
+            await Bun.write(imagePath, buffer);
+            console.log(`[generate-static] Image saved to ${imagePath}`);
+        } catch (imageError) {
+            // Log warning but don't fail the build if image generation fails
+            // This is expected during Vercel builds where Chromium isn't available
+            console.warn('[generate-static] Image generation skipped (non-critical):', imageError instanceof Error ? imageError.message : String(imageError));
+            console.warn('[generate-static] Images can be generated at runtime via /api/image endpoint.');
+        }
         
         // Also save data as JSON for reference
         const dataPath = join(distDir, 'image-data.json');
