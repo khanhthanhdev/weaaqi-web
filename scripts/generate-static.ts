@@ -2,7 +2,7 @@ import nodeHtmlToImage from 'node-html-to-image';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import chromium from '@sparticuz/chromium';
+import { execSync } from 'child_process';
 
 // Fetch weather data
 async function fetchWeatherData(apiKey: string) {
@@ -400,6 +400,55 @@ export const CONFIG = {
     refreshInterval: 15 * 60 * 1000, // 15 minutes in milliseconds
 };
 
+// Helper function to find system Chrome/Chromium for local development
+function findSystemChrome(): string | undefined {
+    // First, check CHROME_PATH environment variable
+    if (process.env.CHROME_PATH) {
+        if (existsSync(process.env.CHROME_PATH)) {
+            return process.env.CHROME_PATH;
+        }
+        console.warn(`[generate-static] CHROME_PATH set to "${process.env.CHROME_PATH}" but file doesn't exist`);
+    }
+    
+    const possiblePaths = [
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/bin/chromium',
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        // WSL paths (Windows Chrome accessible from WSL)
+        '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
+        '/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+    ];
+    
+    for (const path of possiblePaths) {
+        if (existsSync(path)) {
+            return path;
+        }
+    }
+    
+    // Try to find via which/where command
+    try {
+        const command = process.platform === 'win32' ? 'where chrome' : 'which google-chrome google-chrome-stable chromium chromium-browser 2>/dev/null';
+        const result = execSync(command, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+        if (result) {
+            const paths = result.split('\n').filter(p => p.trim());
+            for (const path of paths) {
+                if (existsSync(path.trim())) {
+                    return path.trim();
+                }
+            }
+        }
+    } catch (e) {
+        // Command failed, Chrome not in PATH
+    }
+    
+    return undefined;
+}
+
 // Export the generate function for use by server.ts
 export async function generate() {
     try {
@@ -559,22 +608,39 @@ export async function generate() {
 
         console.log('[generate-static] Converting HTML to PNG...');
         
-        // Configure Chromium for Vercel serverless
+        // Configure Chromium for Vercel serverless or local development
+        // chromium-min is pre-installed on Vercel, but not locally
         const isVercel = process.env.VERCEL === '1';
-        const chromiumArgs = isVercel
-            ? chromium.args
-            : [
-                  '--no-sandbox',
-                  '--disable-setuid-sandbox',
-                  '--disable-dev-shm-usage',
-                  '--disable-accelerated-2d-canvas',
-                  '--no-first-run',
-                  '--no-zygote',
-                  '--single-process',
-                  '--disable-gpu',
-              ];
         
-        const executablePath = isVercel ? await chromium.executablePath() : undefined;
+        let chromiumArgs: string[];
+        let executablePath: string | undefined;
+        
+        if (isVercel) {
+            // On Vercel, use chromium-min (dynamically import to avoid errors locally)
+            const chromium = await import('@sparticuz/chromium-min');
+            chromiumArgs = chromium.default.args;
+            executablePath = await chromium.default.executablePath();
+        } else {
+            // For local development, try to find system Chrome/Chromium
+            chromiumArgs = [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu',
+            ];
+            executablePath = findSystemChrome();
+            if (!executablePath) {
+                throw new Error(
+                    'Chrome/Chromium not found. Please install Google Chrome or Chromium, ' +
+                    'or set CHROME_PATH environment variable to the Chrome executable path.'
+                );
+            }
+            console.log(`[generate-static] Using system Chrome at: ${executablePath}`);
+        }
         
         // Ensure HTML body/html are exactly 800x480
         // Add inline style to body to enforce exact dimensions

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodeHtmlToImage from 'node-html-to-image';
-import chromium from '@sparticuz/chromium';
+import chromium from '@sparticuz/chromium-min';
 
 // Fetch weather data
 async function fetchWeatherData(apiKey: string) {

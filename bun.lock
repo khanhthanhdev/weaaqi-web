@@ -5,7 +5,7 @@
       "name": "weaaqi-page",
       "dependencies": {
         "@resvg/resvg-js": "^2.6.2",
-        "@sparticuz/chromium": "^119.0.2",
+        "@sparticuz/chromium-min": "^119.0.2",
         "node-html-to-image": "^3.3.0",
         "puppeteer-core": "^21.5.0",
         "satori": "^0.18.3",
@@ -83,7 +83,7 @@
 
     "@shuding/opentype.js": ["@shuding/opentype.js@1.4.0-beta.0", "", { "dependencies": { "fflate": "^0.7.3", "string.prototype.codepointat": "^0.2.1" }, "bin": { "ot": "bin/ot" } }, "sha512-3NgmNyH3l/Hv6EvsWJbsvpcpUba6R8IREQ83nH83cyakCw7uM1arZKNfHwv1Wz6jgqrF/j4x5ELvR6PnK9nTcA=="],
 
-    "@sparticuz/chromium": ["@sparticuz/chromium@119.0.2", "", { "dependencies": { "follow-redirects": "^1.15.3", "tar-fs": "^3.0.4" } }, "sha512-VB6tHW13YpQ7HqyhKG1KU8Z1RIb/kfHMg8j/4ft5rk8mMvEm2YkBYFCHnj+yb0P/RPLcdgX3+VC58GuJilOtww=="],
+    "@sparticuz/chromium-min": ["@sparticuz/chromium-min@119.0.2", "", { "dependencies": { "follow-redirects": "^1.15.3", "tar-fs": "^3.0.4" } }, "sha512-66ztqT2MScSzbK3Jv6tViEqc2prgKLOX2lst2l89GlKl64Y4Mh72ZlEppjkXybjAVNb1B5IqFVtq67t++En9kA=="],
 
     "@tootallnate/quickjs-emscripten": ["@tootallnate/quickjs-emscripten@0.23.0", "", {}, "sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA=="],
 
