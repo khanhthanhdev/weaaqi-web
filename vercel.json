@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "functions": {
     "scripts/server.ts": {
-      "runtime": "@vercel/node@20"
+      "runtime": "nodejs@20.x"
     }
   },
   "env": {
