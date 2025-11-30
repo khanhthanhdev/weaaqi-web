@@ -10,6 +10,7 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { readFileSync } from 'fs';
 import { platform } from 'os';
+import { chromium } from 'playwright';
 
 // Helper function to convert file to data URL
 function fileToDataURL(filePath: string): string {
@@ -255,7 +256,7 @@ async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<s
         template = await readFile('./index.html', 'utf8');
     }
 
-    // Determine weather icon URL
+    // Determine weather icon URL - convert to data URL for image generation
     let weatherIconUrl: string;
     if (weatherAction?.iconKey && ICON_MAPPING[weatherAction.iconKey]) {
         const iconPath = ICON_MAPPING[weatherAction.iconKey];
@@ -263,10 +264,34 @@ async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<s
         if (existsSync(fullIconPath)) {
             weatherIconUrl = fileToDataURL(fullIconPath);
         } else {
-            weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+            // Try to fetch and convert external icon to data URL
+            try {
+                const iconResponse = await fetch(`https://openweathermap.org/img/wn/${weatherIcon}@4x.png`);
+                if (iconResponse.ok) {
+                    const iconBuffer = await iconResponse.arrayBuffer();
+                    const base64 = Buffer.from(iconBuffer).toString('base64');
+                    weatherIconUrl = `data:image/png;base64,${base64}`;
+                } else {
+                    weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+                }
+            } catch {
+                weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+            }
         }
     } else {
-        weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+        // Try to fetch and convert external icon to data URL
+        try {
+            const iconResponse = await fetch(`https://openweathermap.org/img/wn/${weatherIcon}@4x.png`);
+            if (iconResponse.ok) {
+                const iconBuffer = await iconResponse.arrayBuffer();
+                const base64 = Buffer.from(iconBuffer).toString('base64');
+                weatherIconUrl = `data:image/png;base64,${base64}`;
+            } else {
+                weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+            }
+        } catch {
+            weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+        }
     }
 
     // Replace placeholders in template
@@ -351,12 +376,56 @@ async function copyStaticAssets(): Promise<void> {
         { from: './icons', to: join(CONFIG.outputDir, 'icons') },
     ];
 
-    for (const asset of assets) {
+    for ( const asset of assets) {
         if (!existsSync(asset.from)) {
             continue;
         }
 
         await copyDirectory(asset.from, asset.to);
+    }
+}
+
+// Convert HTML to PNG image
+async function generateImageFromHTML(html: string, outputPath: string): Promise<void> {
+    try {
+        // Launch browser
+        const browser = await chromium.launch({
+            headless: true,
+        });
+        
+        const page = await browser.newPage();
+        
+        // Set viewport to match the image dimensions (800x480)
+        await page.setViewportSize({ width: 800, height: 480 });
+        
+        // Set content directly - HTML should already have inlined CSS and data URLs for images
+        await page.setContent(html, {
+            waitUntil: 'networkidle',
+            timeout: 30000,
+        });
+        
+        // Wait for fonts and any remaining resources to load
+        await page.waitForTimeout(2000);
+        
+        // Take screenshot
+        await page.screenshot({
+            path: outputPath,
+            type: 'png',
+            fullPage: false,
+            clip: {
+                x: 0,
+                y: 0,
+                width: 800,
+                height: 480,
+            },
+        });
+        
+        await browser.close();
+        
+        console.log(`✓ Image generated at ${outputPath}`);
+    } catch (error) {
+        console.error('✗ Failed to generate image:', error);
+        throw error;
     }
 }
 
@@ -384,11 +453,13 @@ async function generate(): Promise<void> {
         await writeFile(outputPath, html, 'utf8');
         console.log(`✓ Written to ${outputPath}`);
 
-        // Skip image generation during build (will be generated on-demand via API)
-        console.log('✓ Image generation skipped (available via /api/image)');
-
         await copyStaticAssets();
         console.log('✓ Static assets copied');
+
+        // Generate image from HTML
+        const imagePath = join(CONFIG.outputDir, 'image.png');
+        await generateImageFromHTML(html, imagePath);
+        console.log(`✓ Image generated from HTML`);
 
         // Also save the raw data for debugging/API endpoints
         const dataPath = join(CONFIG.outputDir, 'data.json');
