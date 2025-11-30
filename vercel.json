@@ -2,9 +2,6 @@
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/image", "destination": "/api/image" }
-  ],
-  "env": {
-    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
-  }
+    { "source": "/api/image", "destination": "/image.png" }
+  ]
 }
