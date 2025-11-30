@@ -2,6 +2,7 @@ import nodeHtmlToImage from 'node-html-to-image';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import chromium from '@sparticuz/chromium';
 
 // Fetch weather data
 async function fetchWeatherData(apiKey: string) {
@@ -558,6 +559,23 @@ export async function generate() {
 
         console.log('[generate-static] Converting HTML to PNG...');
         
+        // Configure Chromium for Vercel serverless
+        const isVercel = process.env.VERCEL === '1';
+        const chromiumArgs = isVercel
+            ? chromium.args
+            : [
+                  '--no-sandbox',
+                  '--disable-setuid-sandbox',
+                  '--disable-dev-shm-usage',
+                  '--disable-accelerated-2d-canvas',
+                  '--no-first-run',
+                  '--no-zygote',
+                  '--single-process',
+                  '--disable-gpu',
+              ];
+        
+        const executablePath = isVercel ? await chromium.executablePath() : undefined;
+        
         // Ensure HTML body/html are exactly 800x480
         // Add inline style to body to enforce exact dimensions
         html = html.replace(
@@ -572,11 +590,8 @@ export async function generate() {
             type: 'png',
             quality: 100,
             puppeteerArgs: {
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                ],
+                args: chromiumArgs,
+                ...(executablePath && { executablePath }),
                 defaultViewport: {
                     width: 800,
                     height: 480,
