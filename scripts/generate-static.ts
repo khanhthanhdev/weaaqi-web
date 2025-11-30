@@ -2,7 +2,6 @@ import nodeHtmlToImage from 'node-html-to-image';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { execSync } from 'child_process';
 
 // Fetch weather data
 async function fetchWeatherData(apiKey: string) {
@@ -613,6 +612,13 @@ export async function generate() {
 
         console.log('[generate-static] Converting HTML to PNG...');
         
+        // Ensure HTML body/html are exactly 800x480
+        // Add inline style to body to enforce exact dimensions
+        html = html.replace(
+            /<body[^>]*>/,
+            '<body style="width: 800px; height: 480px; margin: 0; padding: 0; overflow: hidden;">'
+        );
+        
         // Convert HTML to PNG using node-html-to-image
         // For local development, use default puppeteer
         const imageBuffer = await nodeHtmlToImage({
@@ -625,6 +631,10 @@ export async function generate() {
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
                 ],
+                defaultViewport: {
+                    width: 800,
+                    height: 480,
+                },
             },
             waitUntil: 'networkidle0',
         }) as Buffer;
