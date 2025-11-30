@@ -8,7 +8,6 @@
 import { readFile, writeFile, mkdir, readdir, copyFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import nodeHtmlToImage from 'node-html-to-image';
 import { readFileSync } from 'fs';
 import { platform } from 'os';
 
@@ -385,47 +384,8 @@ async function generate(): Promise<void> {
         await writeFile(outputPath, html, 'utf8');
         console.log(`✓ Written to ${outputPath}`);
 
-        // Generate PNG image from the HTML
-        const imagePath = join(CONFIG.outputDir, 'image.png');
-        
-        let puppeteerArgs: any = {
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        };
-        
-        // Use @sparticuz/chromium for serverless environments (Vercel, etc.)
-        if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-            try {
-                const { default: chromium } = await import('@sparticuz/chromium');
-                puppeteerArgs = {
-                    executablePath: await chromium.executablePath(),
-                    args: [
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--disable-accelerated-2d-canvas',
-                        '--no-first-run',
-                        '--no-zygote',
-                        '--single-process',
-                        '--disable-gpu'
-                    ],
-                };
-            } catch (error) {
-                console.warn('Failed to load @sparticuz/chromium, falling back to default:', error);
-            }
-        }
-        
-        const image = await nodeHtmlToImage({
-            html: html,
-            type: 'png',
-            width: 800,
-            height: 480,
-            puppeteerArgs: puppeteerArgs,
-            beforeScreenshot: async (page) => {
-                await page.setViewport({ width: 800, height: 480 });
-            },
-        });
-        await writeFile(imagePath, image);
-        console.log(`✓ Image written to ${imagePath}`);
+        // Skip image generation during build (will be generated on-demand via API)
+        console.log('✓ Image generation skipped (available via /api/image)');
 
         await copyStaticAssets();
         console.log('✓ Static assets copied');

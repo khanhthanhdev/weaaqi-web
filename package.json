@@ -1,8 +1,13 @@
 {
   "name": "weaaqi-page",
   "version": "1.0.0",
+  "author": "",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@vercel/node": "^5.5.13"
+  },
   "description": "Weather & AQI Dashboard with automatic static site generation",
-  "type": "module",
+  "license": "MIT",
   "scripts": {
     "dev": "bun run scripts/server.ts",
     "dev:html": "bun ./index.html",
@@ -12,14 +17,9 @@
     "start": "bun run scripts/server.ts",
     "preview": "bun ./dist/index.html"
   },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@vercel/node": "^5.5.13"
-  },
-  "author": "",
-  "license": "MIT",
+  "type": "module",
   "dependencies": {
-    "@sparticuz/chromium": "^141.0.0",
-    "node-html-to-image": "^5.0.0"
+    "@resvg/resvg-js": "^2.6.2",
+    "satori": "^0.18.3"
   }
 }
