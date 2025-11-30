@@ -8,6 +8,20 @@
 import { readFile, writeFile, mkdir, readdir, copyFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import nodeHtmlToImage from 'node-html-to-image';
+import { readFileSync } from 'fs';
+
+// Helper function to convert file to data URL
+function fileToDataURL(filePath: string): string {
+    try {
+        const fileBuffer = readFileSync(filePath);
+        const mimeType = filePath.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+        const base64 = fileBuffer.toString('base64');
+        return `data:${mimeType};base64,${base64}`;
+    } catch {
+        return '';
+    }
+}
 
 // Configuration
 const CONFIG = {
@@ -244,7 +258,13 @@ async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<s
     // Determine weather icon URL
     let weatherIconUrl: string;
     if (weatherAction?.iconKey && ICON_MAPPING[weatherAction.iconKey]) {
-        weatherIconUrl = ICON_MAPPING[weatherAction.iconKey];
+        const iconPath = ICON_MAPPING[weatherAction.iconKey];
+        const fullIconPath = join(process.cwd(), iconPath);
+        if (existsSync(fullIconPath)) {
+            weatherIconUrl = fileToDataURL(fullIconPath);
+        } else {
+            weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
+        }
     } else {
         weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
     }
@@ -276,6 +296,26 @@ async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<s
     let html = template;
     for (const [placeholder, value] of Object.entries(replacements)) {
         html = html.replaceAll(placeholder, value);
+    }
+
+    // Inline CSS for image generation
+    const cssPath = join(process.cwd(), 'templates', 'css', 'main.css');
+    try {
+        let cssContent = await readFile(cssPath, 'utf8');
+        
+        // Replace url() references with data URLs
+        cssContent = cssContent.replace(/url\("?\.\.\/images\/([^"]+)"?\)/g, (match, filename) => {
+            const imagePath = join(process.cwd(), 'figma-to-html', 'images', filename);
+            const dataUrl = fileToDataURL(imagePath);
+            return dataUrl ? `url("${dataUrl}")` : match;
+        });
+        
+        html = html.replace(
+            '<link href="./css/main.css" rel="stylesheet" />',
+            `<style>${cssContent}</style>`
+        );
+    } catch (error) {
+        console.warn('Failed to inline CSS:', error);
     }
 
     return html;
@@ -343,6 +383,18 @@ async function generate(): Promise<void> {
         const outputPath = join(CONFIG.outputDir, 'index.html');
         await writeFile(outputPath, html, 'utf8');
         console.log(`✓ Written to ${outputPath}`);
+
+        // Generate PNG image from the HTML
+        const imagePath = join(CONFIG.outputDir, 'image.png');
+        const image = await nodeHtmlToImage({
+            html: html,
+            type: 'png',
+            puppeteerArgs: {
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            },
+        });
+        await writeFile(imagePath, image);
+        console.log(`✓ Image written to ${imagePath}`);
 
         await copyStaticAssets();
         console.log('✓ Static assets copied');

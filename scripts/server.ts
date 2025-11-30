@@ -6,8 +6,9 @@
 
 import { serve, file } from 'bun';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { generate, CONFIG } from './generate-static';
+import nodeHtmlToImage from 'node-html-to-image';
 
 const PORT = Number(process.env.PORT) || 3000;
 const DIST_DIR = join(process.cwd(), 'dist');
@@ -164,6 +165,23 @@ async function main(): Promise<void> {
                 });
             }
 
+            // API endpoint to generate PNG image from HTML
+            if (pathname === '/api/image') {
+                const imagePath = join(DIST_DIR, 'image.png');
+                if (existsSync(imagePath)) {
+                    return new Response(file(imagePath), {
+                        headers: {
+                            'Content-Type': 'image/png',
+                            'Cache-Control': 'no-cache',
+                        },
+                    });
+                }
+                return new Response(JSON.stringify({ error: 'Image not available yet' }), {
+                    status: 503,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            }
+
             // Serve static files
             const response = await serveFile(pathname);
             if (response) {
@@ -197,6 +215,7 @@ async function main(): Promise<void> {
 ║   • GET  /           - Dashboard (auto-refreshed)          ║
 ║   • GET  /api/data   - Raw weather & AQI data              ║
 ║   • POST /api/regenerate - Force regeneration              ║
+║   • GET  /api/image  - Generate PNG image                  ║
 ║   • GET  /health     - Health check                        ║
 ║                                                            ║
 ║   Auto-regeneration: Every 15 minutes                      ║
