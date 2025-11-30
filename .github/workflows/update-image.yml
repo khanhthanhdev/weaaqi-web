@@ -1,0 +1,16 @@
+name: Update Weather Image
+
+on:
+  schedule:
+    # Run every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API to update image
+        run: |
+          # Replace with your actual Vercel domain
+          curl -s "https://weaaqi-web.vercel.app/api/image" > /dev/null
