@@ -11,7 +11,7 @@ import {
     formatDate,
     formatTime,
     kmhFromMs,
-} from '../lib/weather-utils';
+} from './weather-utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
