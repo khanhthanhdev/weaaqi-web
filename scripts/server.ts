@@ -14,6 +14,60 @@ const PORT = Number(process.env.PORT) || 3000;
 const DIST_DIR = join(process.cwd(), 'dist');
 const PUBLIC_DIR = process.cwd();
 
+// Generate PNG image from dist/index.html
+async function generateImageFromHTML(): Promise<Buffer> {
+    const htmlPath = join(DIST_DIR, 'index.html');
+    const cssPath = join(DIST_DIR, 'index-vdhtnexh.css');
+    
+    if (!existsSync(htmlPath)) {
+        throw new Error(`HTML file not found: ${htmlPath}`);
+    }
+    
+    if (!existsSync(cssPath)) {
+        throw new Error(`CSS file not found: ${cssPath}`);
+    }
+    
+    // Read HTML and CSS files
+    let html = readFileSync(htmlPath, 'utf-8');
+    const css = readFileSync(cssPath, 'utf-8');
+    
+    // Inline the CSS: replace the link tag with a style tag containing the CSS
+    html = html.replace(
+        /<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*index-vdhtnexh\.css["'][^>]*>/i,
+        `<style>${css}</style>`
+    );
+    
+    // Remove the JavaScript script tag
+    html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    
+    // Ensure body has proper dimensions for rendering
+    html = html.replace(
+        /<body[^>]*>/,
+        '<body style="width: 800px; height: 480px; margin: 0; padding: 0; overflow: hidden;">'
+    );
+    
+    // Convert HTML to PNG using node-html-to-image
+    const imageBuffer = await nodeHtmlToImage({
+        html: html,
+        type: 'png',
+        quality: 100,
+        puppeteerArgs: {
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+            ],
+            defaultViewport: {
+                width: 800,
+                height: 480,
+            },
+        },
+        waitUntil: 'networkidle0',
+    }) as Buffer;
+    
+    return imageBuffer;
+}
+
 // MIME types for common file extensions
 const MIME_TYPES: Record<string, string> = {
     '.html': 'text/html; charset=utf-8',
@@ -167,19 +221,26 @@ async function main(): Promise<void> {
 
             // API endpoint to generate PNG image from HTML
             if (pathname === '/api/image') {
-                const imagePath = join(DIST_DIR, 'image.png');
-                if (existsSync(imagePath)) {
-                    return new Response(file(imagePath), {
+                try {
+                    const imageBuffer = await generateImageFromHTML();
+                    // Convert to Uint8Array for Response
+                    const buffer = typeof imageBuffer === 'string' 
+                        ? new Uint8Array(Buffer.from(imageBuffer, 'base64'))
+                        : new Uint8Array(imageBuffer);
+                    
+                    return new Response(buffer, {
                         headers: {
                             'Content-Type': 'image/png',
                             'Cache-Control': 'no-cache',
                         },
                     });
+                } catch (error) {
+                    console.error('[api/image] Error generating image:', error);
+                    return new Response(JSON.stringify({ error: String(error) }), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json' },
+                    });
                 }
-                return new Response(JSON.stringify({ error: 'Image not available yet' }), {
-                    status: 503,
-                    headers: { 'Content-Type': 'application/json' },
-                });
             }
 
             // Serve static files
