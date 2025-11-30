@@ -10,7 +10,8 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { readFileSync } from 'fs';
 import { platform } from 'os';
-import { chromium } from 'playwright';
+import satori from 'satori';
+import { Resvg } from '@resvg/resvg-js';
 
 // Helper function to convert file to data URL
 function fileToDataURL(filePath: string): string {
@@ -385,42 +386,279 @@ async function copyStaticAssets(): Promise<void> {
     }
 }
 
-// Convert HTML to PNG image
-async function generateImageFromHTML(html: string, outputPath: string): Promise<void> {
+// Format date for image (matches api/image.ts format)
+function formatDateForImage(date: Date): string {
+    return date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+    }).toUpperCase();
+}
+
+// Format time for image (matches api/image.ts format)
+function formatTimeForImage(date: Date): string {
+    return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false
+    });
+}
+
+// Get AQI status (matches api/image.ts)
+function getAqiStatusForImage(pm25: number) {
+    if (pm25 <= 12) return { status: 'GOOD', color: '#00e400' };
+    if (pm25 <= 35.4) return { status: 'MODERATE', color: '#ffff00' };
+    if (pm25 <= 55.4) return { status: 'UNHEALTHY (SG)', color: '#ff7e00' };
+    if (pm25 <= 150.4) return { status: 'UNHEALTHY', color: '#ff0000' };
+    if (pm25 <= 250.4) return { status: 'VERY UNHEALTHY', color: '#8f3f97' };
+    return { status: 'HAZARDOUS', color: '#7e0023' };
+}
+
+// Generate PNG image from weather and AQI data using satori (serverless-compatible)
+async function generateImageFromData(
+    weather: WeatherData,
+    aqi: AQIData,
+    outputPath: string
+): Promise<void> {
     try {
-        // Launch browser
-        const browser = await chromium.launch({
-            headless: true,
-        });
-        
-        const page = await browser.newPage();
-        
-        // Set viewport to match the image dimensions (800x480)
-        await page.setViewportSize({ width: 800, height: 480 });
-        
-        // Set content directly - HTML should already have inlined CSS and data URLs for images
-        await page.setContent(html, {
-            waitUntil: 'networkidle',
-            timeout: 30000,
-        });
-        
-        // Wait for fonts and any remaining resources to load
-        await page.waitForTimeout(2000);
-        
-        // Take screenshot
-        await page.screenshot({
-            path: outputPath,
-            type: 'png',
-            fullPage: false,
-            clip: {
-                x: 0,
-                y: 0,
+        const now = new Date();
+        const temp = Math.round(weather.main?.temp || 0);
+        const feelsLike = Math.round(weather.main?.feels_like || temp);
+        const humidity = weather.main?.humidity || 0;
+        const windSpeed = kmhFromMs(weather.wind?.speed || 0);
+        const description = weather.weather?.[0]?.description?.toUpperCase() || 'UNKNOWN';
+        const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
+        const aqiInfo = getAqiStatusForImage(pm25);
+
+        // Load Inter font
+        const fontResponse = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff');
+        if (!fontResponse.ok) {
+            throw new Error('Failed to fetch font');
+        }
+        const fontData = await fontResponse.arrayBuffer();
+
+        // Create SVG using satori
+        const svg = await satori(
+            {
+                type: 'div',
+                props: {
+                    style: {
+                        width: '800px',
+                        height: '480px',
+                        background: 'white',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        fontFamily: 'Inter',
+                    },
+                    children: [
+                        // Header
+                        {
+                            type: 'div',
+                            props: {
+                                style: {
+                                    background: '#1a1a1a',
+                                    padding: '12px 24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                },
+                                children: [
+                                    {
+                                        type: 'span',
+                                        props: {
+                                            style: { color: '#FFE601', fontSize: '20px', fontWeight: 'bold' },
+                                            children: `${formatDateForImage(now)} | HANOI, VIETNAM`,
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                        // Main content
+                        {
+                            type: 'div',
+                            props: {
+                                style: {
+                                    display: 'flex',
+                                    flex: 1,
+                                    padding: '20px',
+                                },
+                                children: [
+                                    // Left side - Weather
+                                    {
+                                        type: 'div',
+                                        props: {
+                                            style: {
+                                                flex: 1,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'center',
+                                            },
+                                            children: [
+                                                {
+                                                    type: 'div',
+                                                    props: {
+                                                        style: { fontSize: '80px', fontWeight: 'bold' },
+                                                        children: `${temp}°C`,
+                                                    },
+                                                },
+                                                {
+                                                    type: 'div',
+                                                    props: {
+                                                        style: { fontSize: '24px', color: '#666', marginTop: '8px' },
+                                                        children: description,
+                                                    },
+                                                },
+                                                {
+                                                    type: 'div',
+                                                    props: {
+                                                        style: { display: 'flex', gap: '24px', marginTop: '24px' },
+                                                        children: [
+                                                            {
+                                                                type: 'div',
+                                                                props: {
+                                                                    style: { display: 'flex', flexDirection: 'column' },
+                                                                    children: [
+                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Humidity' } },
+                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${humidity}%` } },
+                                                                    ],
+                                                                },
+                                                            },
+                                                            {
+                                                                type: 'div',
+                                                                props: {
+                                                                    style: { display: 'flex', flexDirection: 'column' },
+                                                                    children: [
+                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Feels Like' } },
+                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${feelsLike}°C` } },
+                                                                    ],
+                                                                },
+                                                            },
+                                                            {
+                                                                type: 'div',
+                                                                props: {
+                                                                    style: { display: 'flex', flexDirection: 'column' },
+                                                                    children: [
+                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Wind' } },
+                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${windSpeed} km/h` } },
+                                                                    ],
+                                                                },
+                                                            },
+                                                        ],
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    },
+                                    // Right side - AQI
+                                    {
+                                        type: 'div',
+                                        props: {
+                                            style: {
+                                                width: '220px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                background: '#f5f5f5',
+                                                borderRadius: '12px',
+                                                padding: '20px',
+                                            },
+                                            children: [
+                                                {
+                                                    type: 'div',
+                                                    props: {
+                                                        style: { fontSize: '14px', color: '#666' },
+                                                        children: 'Air Quality (PM2.5)',
+                                                    },
+                                                },
+                                                {
+                                                    type: 'div',
+                                                    props: {
+                                                        style: { 
+                                                            fontSize: '64px', 
+                                                            fontWeight: 'bold',
+                                                            color: aqiInfo.color,
+                                                            marginTop: '8px',
+                                                        },
+                                                        children: `${pm25}`,
+                                                    },
+                                                },
+                                                {
+                                                    type: 'div',
+                                                    props: {
+                                                        style: { 
+                                                            fontSize: '18px', 
+                                                            fontWeight: 'bold',
+                                                            color: aqiInfo.color,
+                                                            marginTop: '8px',
+                                                        },
+                                                        children: aqiInfo.status,
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                        // Footer
+                        {
+                            type: 'div',
+                            props: {
+                                style: {
+                                    background: '#1a1a1a',
+                                    padding: '12px 24px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                },
+                                children: [
+                                    {
+                                        type: 'span',
+                                        props: {
+                                            style: { color: '#fff', fontSize: '14px' },
+                                            children: 'INTRO TO CECS',
+                                        },
+                                    },
+                                    {
+                                        type: 'span',
+                                        props: {
+                                            style: { color: '#999', fontSize: '12px' },
+                                            children: `Updated: ${formatTimeForImage(now)}`,
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            },
+            {
                 width: 800,
                 height: 480,
+                fonts: [
+                    {
+                        name: 'Inter',
+                        data: fontData,
+                        weight: 400,
+                        style: 'normal',
+                    },
+                ],
+            }
+        );
+
+        // Convert SVG to PNG using resvg
+        const resvg = new Resvg(svg, {
+            fitTo: {
+                mode: 'width',
+                value: 800,
             },
         });
-        
-        await browser.close();
+        const pngData = resvg.render();
+        const pngBuffer = pngData.asPng();
+
+        // Write PNG to file
+        await writeFile(outputPath, Buffer.from(pngBuffer));
         
         console.log(`✓ Image generated at ${outputPath}`);
     } catch (error) {
@@ -456,10 +694,10 @@ async function generate(): Promise<void> {
         await copyStaticAssets();
         console.log('✓ Static assets copied');
 
-        // Generate image from HTML
+        // Generate image from data using satori (serverless-compatible)
         const imagePath = join(CONFIG.outputDir, 'image.png');
-        await generateImageFromHTML(html, imagePath);
-        console.log(`✓ Image generated from HTML`);
+        await generateImageFromData(weather, aqi, imagePath);
+        console.log(`✓ Image generated from data`);
 
         // Also save the raw data for debugging/API endpoints
         const dataPath = join(CONFIG.outputDir, 'data.json');
