@@ -2,6 +2,8 @@ import nodeHtmlToImage from 'node-html-to-image';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { execSync } from 'child_process';
+import chromium from '@sparticuz/chromium-min';
 
 // Fetch weather data
 async function fetchWeatherData(apiKey: string) {
@@ -619,18 +621,31 @@ export async function generate() {
             '<body style="width: 800px; height: 480px; margin: 0; padding: 0; overflow: hidden;">'
         );
         
+        // Configure Chromium for Vercel serverless
+        const isVercel = process.env.VERCEL === '1';
+        const chromiumArgs = isVercel
+            ? chromium.args
+            : [
+                  '--no-sandbox',
+                  '--disable-setuid-sandbox',
+                  '--disable-dev-shm-usage',
+                  '--disable-accelerated-2d-canvas',
+                  '--no-first-run',
+                  '--no-zygote',
+                  '--single-process',
+                  '--disable-gpu',
+              ];
+        
+        const executablePath = isVercel ? await chromium.executablePath() : undefined;
+        
         // Convert HTML to PNG using node-html-to-image
-        // For local development, use default puppeteer
         const imageBuffer = await nodeHtmlToImage({
             html: html,
             type: 'png',
             quality: 100,
             puppeteerArgs: {
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                ],
+                args: chromiumArgs,
+                ...(executablePath && { executablePath }),
                 defaultViewport: {
                     width: 800,
                     height: 480,
