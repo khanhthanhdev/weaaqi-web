@@ -597,7 +597,7 @@ export async function generate() {
         };
 
         console.log('[generate-static] Generating HTML...');
-        const html = generateHTML(data);
+        let html = generateHTML(data);
 
         // Create dist directory if it doesn't exist
         const distDir = join(process.cwd(), 'dist');
