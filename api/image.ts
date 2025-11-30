@@ -50,17 +50,33 @@ function formatTime(date: Date) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    const startTime = Date.now();
+    const isCronRequest = req.headers['user-agent']?.includes('vercel-cron') || 
+                          req.headers['x-vercel-cron'] === '1';
+    
     try {
         const apiKey = process.env.OPENWEATHER_API_KEY;
         if (!apiKey) {
+            console.error('[image] API key not configured');
             return res.status(500).json({ error: 'API key not configured' });
         }
 
+        // Always fetch the latest data (no caching on our side)
+        console.log(`[image] ${isCronRequest ? '[CRON]' : '[REQUEST]'} Generating image with fresh data...`);
+        
         // Fetch data
         const [weather, aqi] = await Promise.all([
             fetchWeatherData(apiKey),
             fetchAQIData(apiKey),
         ]);
+        
+        // Validate data
+        if (!weather || !weather.main) {
+            throw new Error('Invalid weather data received');
+        }
+        if (!aqi || !aqi.list || !aqi.list[0]) {
+            throw new Error('Invalid AQI data received');
+        }
 
         const now = new Date();
         const temp = Math.round(weather.main?.temp || 0);
@@ -297,11 +313,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const pngData = resvg.render();
         const pngBuffer = pngData.asPng();
 
+        const generationTime = Date.now() - startTime;
+        console.log(`[image] ${isCronRequest ? '[CRON]' : '[REQUEST]'} Image generated successfully in ${generationTime}ms`);
+
+        // Set headers for optimal caching
+        // Cache for 15 minutes (900 seconds) to match cron schedule
         res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Cache-Control', 'public, max-age=900');
+        res.setHeader('Cache-Control', 'public, max-age=900, s-maxage=900');
+        res.setHeader('X-Generated-At', new Date().toISOString());
+        
+        // For cron requests, we still return the image but log it
+        if (isCronRequest) {
+            console.log(`[image] [CRON] Image pre-generated at ${new Date().toISOString()}`);
+        }
+        
         return res.send(Buffer.from(pngBuffer));
     } catch (error) {
-        console.error('Error generating image:', error);
-        return res.status(500).json({ error: 'Failed to generate image', details: String(error) });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[image] Error generating image:`, errorMessage);
+        
+        // Return error response
+        if (!res.headersSent) {
+            res.status(500).json({ 
+                error: 'Failed to generate image', 
+                details: errorMessage,
+                timestamp: new Date().toISOString()
+            });
+        }
     }
 }

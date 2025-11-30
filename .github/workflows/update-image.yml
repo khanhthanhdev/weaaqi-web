@@ -10,7 +10,9 @@ jobs:
   update-image:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping API to update image
+      - name: Generate fresh weather image
+        env:
+          VERCEL_URL: ${{ secrets.VERCEL_URL || 'weaaqi-web.vercel.app' }}
         run: |
-          # Replace with your actual Vercel domain
-          curl -s "https://weaaqi-web.vercel.app/api/image" > /dev/null
+          echo "Calling /api/image endpoint to generate fresh image..."
+          curl -f -s "https://${VERCEL_URL}/api/image" > /dev/null && echo "✓ Image generated successfully" || echo "✗ Failed to generate image"
