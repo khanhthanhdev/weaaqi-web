@@ -71,8 +71,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
         const aqiInfo = getAqiStatus(pm25);
 
-        // Load Inter font
-        const fontResponse = await fetch('https://fonts.gstatic.com/s/inter/v18/UcCo3FwrK3iLTcviYwY.woff');
+        // Load Inter font (use woff2 format with proper URL)
+        const fontResponse = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff');
+        if (!fontResponse.ok) {
+            throw new Error('Failed to fetch font');
+        }
         const fontData = await fontResponse.arrayBuffer();
 
         // Create SVG using satori
