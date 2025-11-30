@@ -10,7 +10,6 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { readFileSync } from 'fs';
 import { platform } from 'os';
-import nodeHtmlToImage from 'node-html-to-image';
 
 // Helper function to convert file to data URL
 function fileToDataURL(filePath: string): string {
@@ -385,26 +384,8 @@ async function generate(): Promise<void> {
         await writeFile(outputPath, html, 'utf8');
         console.log(`✓ Written to ${outputPath}`);
 
-        // Generate PNG image from the HTML (only locally, skip on Vercel)
-        if (!process.env.VERCEL) {
-            const imagePath = join(CONFIG.outputDir, 'image.png');
-            const image = await nodeHtmlToImage({
-                html: html,
-                type: 'png',
-                width: 800,
-                height: 480,
-                puppeteerArgs: {
-                    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-                },
-                beforeScreenshot: async (page) => {
-                    await page.setViewport({ width: 800, height: 480 });
-                },
-            });
-            await writeFile(imagePath, image);
-            console.log(`✓ Image written to ${imagePath}`);
-        } else {
-            console.log('✓ Image generation skipped on Vercel (served from pre-built)');
-        }
+        // Skip image generation during build (will be generated on-demand via API)
+        console.log('✓ Image generation skipped (available via /api/image)');
 
         await copyStaticAssets();
         console.log('✓ Static assets copied');
