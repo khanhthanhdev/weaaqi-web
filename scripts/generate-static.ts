@@ -1,412 +1,28 @@
-#!/usr/bin/env bun
-/**
- * Static Site Generator for Weather & AQI Dashboard
- * Fetches data from OpenWeather API and generates pre-rendered HTML files
- * Runs every 15 minutes automatically
- */
-
-import { readFile, writeFile, mkdir, readdir, copyFile } from 'fs/promises';
+import nodeHtmlToImage from 'node-html-to-image';
+import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { readFileSync } from 'fs';
-import { platform } from 'os';
-import satori from 'satori';
-import { Resvg } from '@resvg/resvg-js';
 
-// Helper function to convert file to data URL
-function fileToDataURL(filePath: string): string {
-    try {
-        const fileBuffer = readFileSync(filePath);
-        const mimeType = filePath.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
-        const base64 = fileBuffer.toString('base64');
-        return `data:${mimeType};base64,${base64}`;
-    } catch {
-        return '';
-    }
-}
-
-// Configuration
-const CONFIG = {
-    lat: 21.0285,
-    lon: 105.8542,
-    locationLabel: 'HANOI, VIETNAM',
-    quote: "A quiet sea never made a skilled sailor.",
-    refreshInterval: 15 * 60 * 1000, // 15 minutes in milliseconds
-    outputDir: './dist',
-    templateFile: './templates/index.template.html',
-};
-
-// Weather action rules
-const WEATHER_ACTIONS = [
-    { tempMax: 5, humidityMin: 0, weatherCodes: [511, 600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622], action: truncateText("Stay warm", 2), condition: truncateText("Severe Winter Weather", 2), iconKey: "cold" },
-    { tempMax: 5, humidityMin: 0, weatherCodes: [800, 801, 802, 803, 804], action: truncateText("Stay warm", 2), condition: truncateText("Freezing Cold", 2), iconKey: "cold" },
-    { tempMax: 10, humidityMin: 0, weatherCodes: null, action: truncateText("Warm tea", 2), condition: truncateText("Cold", 2), iconKey: "tea" },
-    { tempMax: 15, humidityMin: 70, weatherCodes: null, action: truncateText("Wear layers", 2), condition: truncateText("Chilly & Damp", 2), iconKey: "warm" },
-    { tempMin: 35, humidityMin: 50, weatherCodes: null, action: truncateText("Stay hydrated", 2), condition: truncateText("Very Hot", 2), iconKey: "sunglasses" },
-    { tempMin: 30, humidityMin: 75, weatherCodes: null, action: truncateText("Drink water", 2), condition: truncateText("Extreme Humidity", 2), iconKey: "sunglasses" },
-    { tempMin: 30, humidityMin: 50, weatherCodes: null, action: truncateText("Stay cool", 2), condition: truncateText("Very Hot", 2), iconKey: "sunglasses" },
-    { tempMin: 30, humidityMax: 40, weatherCodes: null, action: truncateText("Hydrate well", 2), condition: truncateText("Hot & Dry", 2), iconKey: "sunglasses" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [200, 201, 202, 210, 211, 212, 221, 230, 231, 232], action: truncateText("Take shelter", 2), condition: truncateText("Thunderstorm", 2), iconKey: "umbrella" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [502, 503, 504, 522], action: truncateText("Heavy rain", 2), condition: truncateText("Heavy Rain", 2), iconKey: "umbrella" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [300, 301, 302, 310, 311, 312, 313, 314, 321, 500, 501, 520, 521, 531], action: truncateText("Bring umbrella", 2), condition: truncateText("Rain/Drizzle", 2), iconKey: "umbrella" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [701, 711, 721, 741], action: truncateText("Wear mask", 2), condition: truncateText("Mist/Fog/Haze", 2), iconKey: "haze" },
-    { tempMin: 25, tempMax: 35, humidityMax: 40, weatherCodes: [800, 801], action: truncateText("Great day", 2), condition: truncateText("Sunny", 2), iconKey: "sunglasses" },
-    { tempMin: 15, tempMax: 30, humidityMax: 40, weatherCodes: null, action: truncateText("Enjoy outdoors", 2), condition: truncateText("Pleasant & Dry", 2), iconKey: "sunny" },
-    { tempMin: 15, tempMax: 30, humidityMin: 70, weatherCodes: null, action: truncateText("Light walk", 2), condition: truncateText("Warm & Humid", 2), iconKey: "sunny" },
-    { tempMin: 15, tempMax: 30, humidityMin: 41, humidityMax: 69, weatherCodes: null, action: truncateText("Perfect weather", 2), condition: truncateText("Ideal Comfort", 2), iconKey: "sunny" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: [800, 801, 802, 803, 804], action: truncateText("Check UV", 2), condition: truncateText("Clear/Cloudy Sky", 2), iconKey: "sunny" },
-    { tempMin: -Infinity, tempMax: Infinity, weatherCodes: null, action: truncateText("Enjoy day", 2), condition: truncateText("Comfortable Day", 2), iconKey: "sunny" },
-];
-
-const AQI_ACTIONS = [
-    { max: 12, status: truncateText('GOOD', 2), action: truncateText('Fresh air', 2), iconKey: 'smile', color: '#ffc800' },
-    { max: 35.4, status: truncateText('MODERATE', 2), action: truncateText('Limit exposure', 2), iconKey: 'breeze', color: '#ffc800' },
-    { max: 55.4, status: truncateText('UNHEALTHY (SG)', 2), action: truncateText('Mask up', 2), iconKey: 'mask', color: '#ffc800' },
-    { max: 150.4, status: truncateText('UNHEALTHY', 2), action: truncateText('Wear mask', 2), iconKey: 'mask', color: '#ffc800' },
-    { max: 250.4, status: truncateText('VERY UNHEALTHY', 2), action: truncateText('Stay indoors', 2), iconKey: 'home', color: '#ffc800' },
-    { max: Infinity, status: truncateText('HAZARDOUS', 2), action: truncateText('Avoid outdoors', 2), iconKey: 'mask', color: '#ffc800' },
-];
-
-const AQI_ACTION_ICONS: Record<string, string> = {
-    mask: `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" fill="#ffc800" stroke="#000" stroke-width="6"/><path d="M44 48c2 6 8 6 10 0" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M70 48c2 6 8 6 10 0" stroke="#000" stroke-width="6" stroke-linecap="round"/><rect x="32" y="56" width="56" height="26" rx="8" fill="#fff" stroke="#000" stroke-width="6"/><path d="M32 66c-6 0-12-4-12-10" stroke="#000" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M88 66c6 0 12-4 12-10" stroke="#000" stroke-width="6" stroke-linecap="round" fill="none"/><rect x="42" y="62" width="36" height="10" rx="4" fill="#000"/><path d="M42 72c8 6 20 6 28 0" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/></svg>`,
-    home: `<svg viewBox="0 0 110 110"><path d="M15 60 55 25 95 60v30H15Z" fill="#000"/><rect x="40" y="62" width="30" height="28" rx="4" fill="#ffc800"/><rect x="53" y="68" width="10" height="22" fill="#000"/></svg>`,
-    breeze: `<svg viewBox="0 0 110 110"><path d="M20 46h52a10 10 0 1 0-10-10" stroke="#000" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M20 70h58a10 10 0 1 1-10 10" stroke="#ffc800" stroke-width="8" fill="none" stroke-linecap="round"/></svg>`,
-    smile: `<svg viewBox="0 0 110 110"><circle cx="55" cy="55" r="40" fill="#ffc800" stroke="#000" stroke-width="6"/><circle cx="40" cy="45" r="6" fill="#000"/><circle cx="70" cy="45" r="6" fill="#000"/><path d="M38 68c10 10 24 10 34 0" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/></svg>`,
-    water: `<svg viewBox="0 0 110 110"><path d="M55 10c0 0-35 40-35 60c0 20 15 35 35 35s35-15 35-35c0-20-35-60-35-60z" fill="#ffc800" stroke="#000" stroke-width="6"/><path d="M40 70c5-5 15-5 20 0" stroke="#000" stroke-width="4" stroke-linecap="round" fill="none"/><ellipse cx="55" cy="85" rx="20" ry="8" fill="#000" opacity="0.2"/></svg>`,
-};
-
-// Local icon mapping
-const ICON_MAPPING: Record<string, string> = {
-    cold: 'icons/snowflake.svg',
-    tea: 'icons/tea-cup.svg',
-    warm: 'icons/warm-clothes.svg',
-    sunglasses: 'icons/sunglasses.svg',
-    umbrella: 'icons/rain-storm.svg',
-    haze: 'icons/photo.png', // Assuming photo is used for haze (mask image)
-    sunny: 'icons/sun.svg',
-    mask: 'icons/photo.png', // Explicitly add mask mapping to photo.png
-};
-
-interface WeatherData {
-    weather: Array<{ id: number; description: string; icon: string }>;
-    main: { temp: number; feels_like: number; humidity: number };
-    wind: { speed: number };
-}
-
-interface AQIData {
-    list: Array<{ components: { pm2_5: number } }>;
-}
-
-interface GeneratedData {
-    weather: WeatherData;
-    aqi: AQIData;
-    generatedAt: string;
-}
-
-// Load API key from environment or .env file
-async function loadApiKey(): Promise<string> {
-    // First try environment variable
-    if (process.env.WEATHER_API_KEY) {
-        return process.env.WEATHER_API_KEY;
-    }
-
-    // Try loading from .env file
-    try {
-        const envPath = join(process.cwd(), '.env');
-        const envContent = await readFile(envPath, 'utf8');
-        const match = envContent.match(/WEATHER_API_KEY=(.+)/);
-        if (match) {
-            return match[1].trim();
-        }
-    } catch (error) {
-        // .env file doesn't exist
-    }
-
-    // Try loading from env-config.js
-    try {
-        const envConfigPath = join(process.cwd(), 'env-config.js');
-        const envConfigContent = await readFile(envConfigPath, 'utf8');
-        const match = envConfigContent.match(/OPENWEATHER_API_KEY\s*=\s*["'](.+?)["']/);
-        if (match) {
-            return match[1];
-        }
-    } catch (error) {
-        // env-config.js doesn't exist
-    }
-
-    throw new Error('No API key found. Set WEATHER_API_KEY environment variable or create a .env file.');
-}
-
-// Fetch weather data from OpenWeather API
-async function fetchWeatherData(apiKey: string): Promise<WeatherData> {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${CONFIG.lat}&lon=${CONFIG.lon}&appid=${apiKey}&units=metric`;
+// Fetch weather data
+async function fetchWeatherData(apiKey: string) {
+    const lat = 21.0285;
+    const lon = 105.8542;
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
     const response = await fetch(url);
-    
-    if (!response.ok) {
-        throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
-    }
-    
-    return await response.json();
+    return response.json();
 }
 
-// Fetch AQI data from OpenWeather API
-async function fetchAQIData(apiKey: string): Promise<AQIData> {
-    const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${CONFIG.lat}&lon=${CONFIG.lon}&appid=${apiKey}`;
+// Fetch AQI data
+async function fetchAQIData(apiKey: string) {
+    const lat = 21.0285;
+    const lon = 105.8542;
+    const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`;
     const response = await fetch(url);
-    
-    if (!response.ok) {
-        throw new Error(`AQI API error: ${response.status} ${response.statusText}`);
-    }
-    
-    return await response.json();
+    return response.json();
 }
 
-// Pick weather action based on conditions
-function pickWeatherAction(temp: number, humidity: number, weatherId: number) {
-    return WEATHER_ACTIONS.find(rule => {
-        if (typeof rule.tempMin === 'number' && temp < rule.tempMin) return false;
-        if (typeof rule.tempMax === 'number' && temp > rule.tempMax) return false;
-        if (typeof rule.humidityMin === 'number' && humidity < rule.humidityMin) return false;
-        if (typeof rule.humidityMax === 'number' && humidity > rule.humidityMax) return false;
-        if (Array.isArray(rule.weatherCodes) && !rule.weatherCodes.includes(weatherId)) return false;
-        return true;
-    }) ?? WEATHER_ACTIONS[WEATHER_ACTIONS.length - 1];
-}
-
-// Pick AQI action based on PM2.5 level
-function pickAQIAction(pm25: number) {
-    return AQI_ACTIONS.find(rule => pm25 <= rule.max) ?? AQI_ACTIONS[AQI_ACTIONS.length - 1];
-}
-
-// Get AQI action adjusted for weather
-function getAqiActionForWeather(aqiAction: typeof AQI_ACTIONS[0], temp: number) {
-    if (temp >= 30 && aqiAction.max <= 100) {
-        return { ...aqiAction, action: 'Drink water', iconKey: 'water' };
-    }
-    return aqiAction;
-}
-
-// Format time as HH:MM
-function formatTime(date: Date): string {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-}
-
-// Format date as "MMM DD, YYYY"
-function formatDate(date: Date): string {
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-}
-
-function truncateText(text: string, maxWords: number): string {
-    const words = text.split(' ');
-    if (words.length > maxWords) {
-        return words.slice(0, maxWords).join(' ');
-    }
-    return text;
-}
-
-// Convert m/s to km/h
-function kmhFromMs(speedMs: number): number {
-    return Math.round(speedMs * 3.6);
-}
-
-// Calculate AQI gauge arc
-function calculateAqiArc(pm25: number): { arcLength: number; circumference: number } {
-    const maxPM25 = 360;
-    const normalizedValue = Math.min(pm25 / maxPM25, 1);
-    const radius = 94;
-    const circumference = 2 * Math.PI * radius;
-    const arcLength = circumference * normalizedValue;
-    return { arcLength, circumference };
-}
-
-// Generate static HTML with pre-rendered data
-async function generateStaticHTML(weather: WeatherData, aqi: AQIData): Promise<string> {
-    const now = new Date();
-    
-    // Extract data
-    const description = weather.weather?.[0]?.description?.toUpperCase() || 'UNKNOWN';
-    const temp = Math.round(weather.main?.temp || 0);
-    const feelsLike = Math.round(weather.main?.feels_like || temp);
-    const humidity = weather.main?.humidity || 0;
-    const windSpeed = kmhFromMs(weather.wind?.speed || 0);
-    const weatherId = weather.weather?.[0]?.id || 800;
-    const weatherIcon = weather.weather?.[0]?.icon || '01d';
-    const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
-
-    // Get actions
-    const weatherAction = pickWeatherAction(temp, humidity, weatherId);
-    const baseAqiAction = pickAQIAction(pm25);
-    const aqiAction = getAqiActionForWeather(baseAqiAction, temp);
-
-    // Calculate AQI gauge
-    const { arcLength, circumference } = calculateAqiArc(pm25);
-
-    // Format date and time
-    const dateStr = formatDate(now);
-    const timeStr = formatTime(now);
-
-    // Read template
-    let template: string;
-    try {
-        template = await readFile(CONFIG.templateFile, 'utf8');
-    } catch {
-        // Fall back to reading index.html and creating template
-        template = await readFile('./index.html', 'utf8');
-    }
-
-    // Determine weather icon URL - convert to data URL for image generation
-    let weatherIconUrl: string;
-    if (weatherAction?.iconKey && ICON_MAPPING[weatherAction.iconKey]) {
-        const iconPath = ICON_MAPPING[weatherAction.iconKey];
-        const fullIconPath = join(process.cwd(), iconPath);
-        if (existsSync(fullIconPath)) {
-            weatherIconUrl = fileToDataURL(fullIconPath);
-        } else {
-            // Try to fetch and convert external icon to data URL
-            try {
-                const iconResponse = await fetch(`https://openweathermap.org/img/wn/${weatherIcon}@4x.png`);
-                if (iconResponse.ok) {
-                    const iconBuffer = await iconResponse.arrayBuffer();
-                    const base64 = Buffer.from(iconBuffer).toString('base64');
-                    weatherIconUrl = `data:image/png;base64,${base64}`;
-                } else {
-                    weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
-                }
-            } catch {
-                weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
-            }
-        }
-    } else {
-        // Try to fetch and convert external icon to data URL
-        try {
-            const iconResponse = await fetch(`https://openweathermap.org/img/wn/${weatherIcon}@4x.png`);
-            if (iconResponse.ok) {
-                const iconBuffer = await iconResponse.arrayBuffer();
-                const base64 = Buffer.from(iconBuffer).toString('base64');
-                weatherIconUrl = `data:image/png;base64,${base64}`;
-            } else {
-                weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
-            }
-        } catch {
-            weatherIconUrl = `https://openweathermap.org/img/wn/${weatherIcon}@4x.png`;
-        }
-    }
-
-    // Replace placeholders in template
-    const replacements: Record<string, string> = {
-        '{{DATE}}': dateStr,
-        '{{LOCATION}}': CONFIG.locationLabel,
-        '{{CONDITION}}': weatherAction?.condition?.toUpperCase() || description,
-        '{{TEMPERATURE}}': `${temp}°C`,
-        '{{HERO_ACTION}}': weatherAction?.action?.toUpperCase() || '',
-        '{{WEATHER_ICON}}': weatherIconUrl,
-        '{{HUMIDITY}}': `${humidity} %`,
-        '{{FEELS_LIKE}}': `${feelsLike}° C`,
-        '{{WIND_VALUE}}': String(windSpeed),
-        '{{WIND_UNIT}}': 'km/h',
-        '{{AQI_VALUE}}': String(pm25),
-        '{{AQI_STATUS}}': baseAqiAction.status,
-        '{{AQI_ACTION}}': aqiAction.action.toUpperCase(),
-        '{{AQI_ICON}}': AQI_ACTION_ICONS[aqiAction.iconKey] ?? AQI_ACTION_ICONS.mask,
-        '{{AQI_COLOR}}': baseAqiAction.color || '#ffc800',
-        '{{AQI_ARC_LENGTH}}': String(arcLength),
-        '{{AQI_CIRCUMFERENCE}}': String(circumference),
-        '{{QUOTE}}': CONFIG.quote,
-        '{{LAST_UPDATED}}': timeStr,
-    };
-
-
-    let html = template;
-    for (const [placeholder, value] of Object.entries(replacements)) {
-        html = html.replaceAll(placeholder, value);
-    }
-
-    // Inline CSS for image generation
-    const cssPath = join(process.cwd(), 'templates', 'css', 'main.css');
-    try {
-        let cssContent = await readFile(cssPath, 'utf8');
-        
-        // Replace url() references with data URLs
-        cssContent = cssContent.replace(/url\("?\.\.\/images\/([^"]+)"?\)/g, (match, filename) => {
-            const imagePath = join(process.cwd(), 'figma-to-html', 'images', filename);
-            const dataUrl = fileToDataURL(imagePath);
-            return dataUrl ? `url("${dataUrl}")` : match;
-        });
-        
-        html = html.replace(
-            '<link href="./css/main.css" rel="stylesheet" />',
-            `<style>${cssContent}</style>`
-        );
-    } catch (error) {
-        console.warn('Failed to inline CSS:', error);
-    }
-
-    return html;
-}
-
-// Ensure output directory exists
-async function ensureOutputDir(): Promise<void> {
-    if (!existsSync(CONFIG.outputDir)) {
-        await mkdir(CONFIG.outputDir, { recursive: true });
-    }
-}
-
-async function copyDirectory(source: string, destination: string): Promise<void> {
-    await mkdir(destination, { recursive: true });
-    const entries = await readdir(source, { withFileTypes: true });
-
-    for (const entry of entries) {
-        const srcPath = join(source, entry.name);
-        const destPath = join(destination, entry.name);
-
-        if (entry.isDirectory()) {
-            await copyDirectory(srcPath, destPath);
-        } else {
-            await copyFile(srcPath, destPath);
-        }
-    }
-}
-
-async function copyStaticAssets(): Promise<void> {
-    const assets = [
-        { from: './templates/css', to: join(CONFIG.outputDir, 'css') },
-        { from: './figma-to-html/images', to: join(CONFIG.outputDir, 'images') },
-        { from: './icons', to: join(CONFIG.outputDir, 'icons') },
-    ];
-
-    for ( const asset of assets) {
-        if (!existsSync(asset.from)) {
-            continue;
-        }
-
-        await copyDirectory(asset.from, asset.to);
-    }
-}
-
-// Format date for image (matches api/image.ts format)
-function formatDateForImage(date: Date): string {
-    return date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric',
-        year: 'numeric'
-    }).toUpperCase();
-}
-
-// Format time for image (matches api/image.ts format)
-function formatTimeForImage(date: Date): string {
-    return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false
-    });
-}
-
-// Get AQI status (matches api/image.ts)
-function getAqiStatusForImage(pm25: number) {
+// Get AQI status
+function getAqiStatus(pm25: number) {
     if (pm25 <= 12) return { status: 'GOOD', color: '#00e400' };
     if (pm25 <= 35.4) return { status: 'MODERATE', color: '#ffff00' };
     if (pm25 <= 55.4) return { status: 'UNHEALTHY (SG)', color: '#ff7e00' };
@@ -415,329 +31,581 @@ function getAqiStatusForImage(pm25: number) {
     return { status: 'HAZARDOUS', color: '#7e0023' };
 }
 
-// Generate PNG image from weather and AQI data using satori (serverless-compatible)
-async function generateImageFromData(
-    weather: WeatherData,
-    aqi: AQIData,
-    outputPath: string
-): Promise<void> {
-    try {
-        const now = new Date();
-        const temp = Math.round(weather.main?.temp || 0);
-        const feelsLike = Math.round(weather.main?.feels_like || temp);
-        const humidity = weather.main?.humidity || 0;
-        const windSpeed = kmhFromMs(weather.wind?.speed || 0);
-        const description = weather.weather?.[0]?.description?.toUpperCase() || 'UNKNOWN';
-        const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
-        const aqiInfo = getAqiStatusForImage(pm25);
-
-        // Load Inter font
-        const fontResponse = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff');
-        if (!fontResponse.ok) {
-            throw new Error('Failed to fetch font');
-        }
-        const fontData = await fontResponse.arrayBuffer();
-
-        // Create SVG using satori
-        const svg = await satori(
-            {
-                type: 'div',
-                props: {
-                    style: {
-                        width: '800px',
-                        height: '480px',
-                        background: 'white',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        fontFamily: 'Inter',
-                    },
-                    children: [
-                        // Header
-                        {
-                            type: 'div',
-                            props: {
-                                style: {
-                                    background: '#1a1a1a',
-                                    padding: '12px 24px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                },
-                                children: [
-                                    {
-                                        type: 'span',
-                                        props: {
-                                            style: { color: '#FFE601', fontSize: '20px', fontWeight: 'bold' },
-                                            children: `${formatDateForImage(now)} | HANOI, VIETNAM`,
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                        // Main content
-                        {
-                            type: 'div',
-                            props: {
-                                style: {
-                                    display: 'flex',
-                                    flex: 1,
-                                    padding: '20px',
-                                },
-                                children: [
-                                    // Left side - Weather
-                                    {
-                                        type: 'div',
-                                        props: {
-                                            style: {
-                                                flex: 1,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                justifyContent: 'center',
-                                            },
-                                            children: [
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { fontSize: '80px', fontWeight: 'bold' },
-                                                        children: `${temp}°C`,
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { fontSize: '24px', color: '#666', marginTop: '8px' },
-                                                        children: description,
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { display: 'flex', gap: '24px', marginTop: '24px' },
-                                                        children: [
-                                                            {
-                                                                type: 'div',
-                                                                props: {
-                                                                    style: { display: 'flex', flexDirection: 'column' },
-                                                                    children: [
-                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Humidity' } },
-                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${humidity}%` } },
-                                                                    ],
-                                                                },
-                                                            },
-                                                            {
-                                                                type: 'div',
-                                                                props: {
-                                                                    style: { display: 'flex', flexDirection: 'column' },
-                                                                    children: [
-                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Feels Like' } },
-                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${feelsLike}°C` } },
-                                                                    ],
-                                                                },
-                                                            },
-                                                            {
-                                                                type: 'div',
-                                                                props: {
-                                                                    style: { display: 'flex', flexDirection: 'column' },
-                                                                    children: [
-                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Wind' } },
-                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${windSpeed} km/h` } },
-                                                                    ],
-                                                                },
-                                                            },
-                                                        ],
-                                                    },
-                                                },
-                                            ],
-                                        },
-                                    },
-                                    // Right side - AQI
-                                    {
-                                        type: 'div',
-                                        props: {
-                                            style: {
-                                                width: '220px',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                background: '#f5f5f5',
-                                                borderRadius: '12px',
-                                                padding: '20px',
-                                            },
-                                            children: [
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { fontSize: '14px', color: '#666' },
-                                                        children: 'Air Quality (PM2.5)',
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { 
-                                                            fontSize: '64px', 
-                                                            fontWeight: 'bold',
-                                                            color: aqiInfo.color,
-                                                            marginTop: '8px',
-                                                        },
-                                                        children: `${pm25}`,
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { 
-                                                            fontSize: '18px', 
-                                                            fontWeight: 'bold',
-                                                            color: aqiInfo.color,
-                                                            marginTop: '8px',
-                                                        },
-                                                        children: aqiInfo.status,
-                                                    },
-                                                },
-                                            ],
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                        // Footer
-                        {
-                            type: 'div',
-                            props: {
-                                style: {
-                                    background: '#1a1a1a',
-                                    padding: '12px 24px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                },
-                                children: [
-                                    {
-                                        type: 'span',
-                                        props: {
-                                            style: { color: '#fff', fontSize: '14px' },
-                                            children: 'INTRO TO CECS',
-                                        },
-                                    },
-                                    {
-                                        type: 'span',
-                                        props: {
-                                            style: { color: '#999', fontSize: '12px' },
-                                            children: `Updated: ${formatTimeForImage(now)}`,
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                    ],
-                },
-            },
-            {
-                width: 800,
-                height: 480,
-                fonts: [
-                    {
-                        name: 'Inter',
-                        data: fontData,
-                        weight: 400,
-                        style: 'normal',
-                    },
-                ],
-            }
-        );
-
-        // Convert SVG to PNG using resvg
-        const resvg = new Resvg(svg, {
-            fitTo: {
-                mode: 'width',
-                value: 800,
-            },
-        });
-        const pngData = resvg.render();
-        const pngBuffer = pngData.asPng();
-
-        // Write PNG to file
-        await writeFile(outputPath, Buffer.from(pngBuffer));
-        
-        console.log(`✓ Image generated at ${outputPath}`);
-    } catch (error) {
-        console.error('✗ Failed to generate image:', error);
-        throw error;
-    }
+// Format date
+function formatDate(date: Date) {
+    return date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+    }).toUpperCase();
 }
 
-// Main generation function
-async function generate(): Promise<void> {
-    console.log(`[${new Date().toISOString()}] Starting static site generation...`);
+// Format time
+function formatTime(date: Date) {
+    return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false
+    });
+}
 
+// Generate HTML from data
+function generateHTML(data: {
+    temp: number;
+    feelsLike: number;
+    humidity: number;
+    windSpeed: number;
+    description: string;
+    pm25: number;
+    aqiInfo: { status: string; color: string };
+    date: string;
+    time: string;
+}): string {
+    // Get action text based on AQI status
+    const getActionText = (status: string) => {
+        if (status.includes('GOOD') || status.includes('MODERATE')) return 'PERFECT WEATHER';
+        return 'WEAR MASK';
+    };
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Inter&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f0f0f0;
+        }
+        
+        .v36_37 {
+            width: 800px;
+            height: 480px;
+            background: rgba(255,255,255,1);
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover;
+            opacity: 1;
+            position: relative;
+            top: 0px;
+            left: 0px;
+            overflow: hidden;
+        }
+        
+        .v13_6026 {
+            width: 800px;
+            height: 480px;
+            background: rgba(255,255,255,1);
+            opacity: 1;
+            position: relative;
+            top: 0px;
+            left: 0px;
+            overflow: hidden;
+        }
+        
+        .v13_6031 {
+            width: 391px;
+            color: rgba(255,255,0,1);
+            position: absolute;
+            top: 13px;
+            left: 189px;
+            font-family: Inter;
+            font-weight: 900;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v78_12 {
+            width: 251px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 435px;
+            left: 14px;
+            font-family: Inter;
+            font-weight: 900;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v14_6033 {
+            width: 134px;
+            height: 66px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 331px;
+            left: 37px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .v25_2 {
+            width: 151px;
+            height: 66px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 331px;
+            left: 189px;
+        }
+        
+        .v25_3 {
+            width: 123px;
+            height: 66px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 331px;
+            left: 350px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .v25_5 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 339px;
+            left: 88px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_24 {
+            width: 67px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 358px;
+            left: 88px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_26 {
+            width: 30px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 358px;
+            left: 403px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_25 {
+            width: 69px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 358px;
+            left: 257px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_6 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 339px;
+            left: 257px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v36_35 {
+            width: 120px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 18px;
+            left: 667px;
+            font-family: Inter;
+            font-weight: 500;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_31 {
+            width: 448px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 234px;
+            left: 45px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 36px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v36_32 {
+            width: 123px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 304px;
+            left: 660px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 40px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_7 {
+            width: 40px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 339px;
+            left: 402px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_27 {
+            width: 32px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 372px;
+            left: 433px;
+            font-family: Inter;
+            font-weight: 500;
+            font-size: 13px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_30 {
+            width: 448px;
+            height: 80px;
+            background: rgba(217,217,217,0);
+            opacity: 1;
+            position: absolute;
+            top: 222px;
+            left: 37px;
+            border: 1px solid rgba(0,0,0,1);
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .v29_74 {
+            width: 281px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 97px;
+            left: 233px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 96px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v30_81 {
+            width: 200px;
+            height: 200px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 71px;
+            left: 560px;
+            border-radius: 50%;
+        }
+        
+        .v30_84 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 89px;
+            left: 621px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 40px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_86 {
+            width: 108px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 213px;
+            left: 611px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 16px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_84 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 89px;
+            left: 621px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 40px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_86 {
+            width: 108px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 213px;
+            left: 611px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 16px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_85 {
+            width: 140px;
+            color: rgba(255,255,0,1);
+            position: absolute;
+            top: 135px;
+            left: 590px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 80px;
+            opacity: 1;
+            text-align: center;
+            line-height: 1;
+        }
+        
+        .v38_39 {
+            width: 459px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 434px;
+            left: 310px;
+            font-family: Inter;
+            font-weight: 500;
+            font-style: italic;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+            white-space: nowrap;
+        }
+        
+        .v29_75 {
+            width: 320px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 58px;
+            left: 242px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 32px;
+            opacity: 1;
+            text-align: left;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="v36_37">
+        <div class="v13_6026"></div>
+        <span class="v13_6031">${data.date} | HANOI, VIETNAM</span>
+        <span class="v78_12">INTRO TO CECS</span>
+        <div class="v14_6033"></div>
+        <div class="v25_2"></div>
+        <div class="v25_3"></div>
+        <span class="v25_5">Humidity</span>
+        <span class="v25_24">${data.humidity} %</span>
+        <span class="v26_26">${data.windSpeed}</span>
+        <span class="v25_25">${data.feelsLike}° C</span>
+        <span class="v25_6">Feels Like</span>
+        <span class="v36_35">Update at: ${data.time}</span>
+        <span class="v26_31">${getActionText(data.aqiInfo.status)}</span>
+        <span class="v36_32">${data.aqiInfo.status}</span>
+        <span class="v25_7">Wind</span>
+        <span class="v26_27">km/h</span>
+        <div class="v26_30"></div>
+        <span class="v29_74">${data.temp}°C</span>
+        <div class="v30_81"></div>
+        <span class="v30_84">PM2.5</span>
+        <span class="v30_85" style="color: ${data.aqiInfo.color}">${data.pm25}</span>
+        <span class="v30_86">${data.aqiInfo.status}</span>
+        <span class="v38_39">"A quiet sea never made a skilled sailor."</span>
+        <span class="v29_75">${data.description}</span>
+    </div>
+</body>
+</html>
+    `.trim();
+}
+
+// Configuration
+export const CONFIG = {
+    refreshInterval: 15 * 60 * 1000, // 15 minutes in milliseconds
+};
+
+// Export the generate function for use by server.ts
+export async function generate() {
     try {
-        const apiKey = await loadApiKey();
-        console.log('✓ API key loaded');
+        // Try to get API key from environment variable (Bun auto-loads .env files)
+        let apiKey = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
+        
+        // Fallback: try to load from env-config.js if it exists (for development)
+        if (!apiKey) {
+            try {
+                const envConfig = await import('../env-config.js');
+                apiKey = envConfig.OPENWEATHER_API_KEY || envConfig.default;
+            } catch (e) {
+                // env-config.js doesn't exist or failed to load
+            }
+        }
+        
+        if (!apiKey) {
+            console.error('\n❌ Error: OPENWEATHER_API_KEY not found');
+            console.error('\nTo fix this, create a .env file in the project root with:');
+            console.error('  OPENWEATHER_API_KEY=your_api_key_here');
+            console.error('\nOr export it in your shell:');
+            console.error('  export OPENWEATHER_API_KEY=your_api_key_here\n');
+            throw new Error('OPENWEATHER_API_KEY environment variable is not set');
+        }
 
+        console.log('[generate-static] Fetching weather and AQI data...');
+        
+        // Fetch data
         const [weather, aqi] = await Promise.all([
             fetchWeatherData(apiKey),
             fetchAQIData(apiKey),
         ]);
-        console.log('✓ Weather and AQI data fetched');
-
-        const html = await generateStaticHTML(weather, aqi);
-        console.log('✓ HTML generated');
-
-        await ensureOutputDir();
         
-        // Write the generated HTML
-        const outputPath = join(CONFIG.outputDir, 'index.html');
-        await writeFile(outputPath, html, 'utf8');
-        console.log(`✓ Written to ${outputPath}`);
+        // Validate data
+        if (!weather || !weather.main) {
+            throw new Error('Invalid weather data received');
+        }
+        if (!aqi || !aqi.list || !aqi.list[0]) {
+            throw new Error('Invalid AQI data received');
+        }
 
-        await copyStaticAssets();
-        console.log('✓ Static assets copied');
+        const now = new Date();
+        const temp = Math.round(weather.main?.temp || 0);
+        const feelsLike = Math.round(weather.main?.feels_like || temp);
+        const humidity = weather.main?.humidity || 0;
+        const windSpeed = Math.round((weather.wind?.speed || 0) * 3.6);
+        const description = weather.weather?.[0]?.description?.toUpperCase() || 'UNKNOWN';
+        const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
+        const aqiInfo = getAqiStatus(pm25);
 
-        // Generate image from data using satori (serverless-compatible)
-        const imagePath = join(CONFIG.outputDir, 'image.png');
-        await generateImageFromData(weather, aqi, imagePath);
-        console.log(`✓ Image generated from data`);
-
-        // Also save the raw data for debugging/API endpoints
-        const dataPath = join(CONFIG.outputDir, 'data.json');
-        const data: GeneratedData = {
-            weather,
-            aqi,
-            generatedAt: new Date().toISOString(),
+        const data = {
+            temp,
+            feelsLike,
+            humidity,
+            windSpeed,
+            description,
+            pm25,
+            aqiInfo,
+            date: formatDate(now),
+            time: formatTime(now),
         };
-        await writeFile(dataPath, JSON.stringify(data, null, 2), 'utf8');
-        console.log(`✓ Data written to ${dataPath}`);
 
-        console.log(`[${new Date().toISOString()}] Generation complete!\n`);
-    } catch (error) {
-        console.error('✗ Generation failed:', error);
-        throw error;
-    }
-}
+        console.log('[generate-static] Generating HTML...');
+        const html = generateHTML(data);
 
-// Run with auto-refresh if --watch flag is passed
-async function main(): Promise<void> {
-    const isWatch = process.argv.includes('--watch');
-
-    await generate();
-
-    if (isWatch) {
-        console.log(`🔄 Watching mode enabled. Regenerating every ${CONFIG.refreshInterval / 60000} minutes...\n`);
+        // Create dist directory if it doesn't exist
+        const distDir = join(process.cwd(), 'dist');
+        if (!existsSync(distDir)) {
+            await mkdir(distDir, { recursive: true });
+        }
         
-        setInterval(async () => {
-            try {
-                await generate();
-            } catch (error) {
-                console.error('Generation failed, will retry on next interval:', error);
-            }
-        }, CONFIG.refreshInterval);
+        // Save HTML for reference
+        const htmlPath = join(distDir, 'image.html');
+        await writeFile(htmlPath, html, 'utf-8');
+        console.log(`[generate-static] HTML saved to ${htmlPath}`);
+
+        console.log('[generate-static] Converting HTML to PNG...');
+        
+        // Convert HTML to PNG using node-html-to-image
+        // For local development, use default puppeteer
+        const imageBuffer = await nodeHtmlToImage({
+            html: html,
+            type: 'png',
+            quality: 100,
+            puppeteerArgs: {
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                ],
+            },
+            waitUntil: 'networkidle0',
+        }) as Buffer;
+
+        // Save the image
+        const imagePath = join(distDir, 'image.png');
+        // Convert to Uint8Array for Bun.write
+        const buffer = typeof imageBuffer === 'string' 
+            ? new Uint8Array(Buffer.from(imageBuffer, 'base64'))
+            : new Uint8Array(imageBuffer);
+        await Bun.write(imagePath, buffer);
+        console.log(`[generate-static] Image saved to ${imagePath}`);
+        
+        // Also save data as JSON for reference
+        const dataPath = join(distDir, 'image-data.json');
+        await writeFile(dataPath, JSON.stringify({ ...data, generatedAt: now.toISOString() }), 'utf-8');
+        console.log(`[generate-static] Data saved to ${dataPath}`);
+        
+        console.log('[generate-static] ✓ Image generation completed successfully');
+        
+    } catch (error) {
+        console.error('[generate-static] Error:', error);
+        // Only exit if called directly (not when imported as module)
+        if (import.meta.main) {
+            process.exit(1);
+        }
+        throw error; // Re-throw for module usage
     }
 }
 
-main().catch((error) => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-});
-
-export { generate, CONFIG };
+// Run if called directly
+if (import.meta.main) {
+    generate();
+}

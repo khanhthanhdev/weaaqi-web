@@ -6,5 +6,10 @@
   ],
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+  },
+  "functions": {
+    "api/image.ts": {
+      "maxDuration": 30
+    }
   }
 }

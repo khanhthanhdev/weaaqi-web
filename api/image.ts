@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import satori from 'satori';
-import { Resvg } from '@resvg/resvg-js';
+import nodeHtmlToImage from 'node-html-to-image';
+import chromium from '@sparticuz/chromium';
 
 // Fetch weather data
 async function fetchWeatherData(apiKey: string) {
@@ -49,6 +49,436 @@ function formatTime(date: Date) {
     });
 }
 
+// Generate HTML from data
+function generateHTML(data: {
+    temp: number;
+    feelsLike: number;
+    humidity: number;
+    windSpeed: number;
+    description: string;
+    pm25: number;
+    aqiInfo: { status: string; color: string };
+    date: string;
+    time: string;
+}): string {
+    // Get action text based on AQI status
+    const getActionText = (status: string) => {
+        if (status.includes('GOOD') || status.includes('MODERATE')) return 'PERFECT WEATHER';
+        return 'WEAR MASK';
+    };
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Inter&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f0f0f0;
+        }
+        
+        .v36_37 {
+            width: 800px;
+            height: 480px;
+            background: rgba(255,255,255,1);
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover;
+            opacity: 1;
+            position: relative;
+            top: 0px;
+            left: 0px;
+            overflow: hidden;
+        }
+        
+        .v13_6026 {
+            width: 800px;
+            height: 480px;
+            background: rgba(255,255,255,1);
+            opacity: 1;
+            position: relative;
+            top: 0px;
+            left: 0px;
+            overflow: hidden;
+        }
+        
+        .v13_6031 {
+            width: 391px;
+            color: rgba(255,255,0,1);
+            position: absolute;
+            top: 13px;
+            left: 189px;
+            font-family: Inter;
+            font-weight: 900;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v78_12 {
+            width: 251px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 435px;
+            left: 14px;
+            font-family: Inter;
+            font-weight: 900;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v14_6033 {
+            width: 134px;
+            height: 66px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 331px;
+            left: 37px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .v25_2 {
+            width: 151px;
+            height: 66px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 331px;
+            left: 189px;
+        }
+        
+        .v25_3 {
+            width: 123px;
+            height: 66px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 331px;
+            left: 350px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .v25_5 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 339px;
+            left: 88px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_24 {
+            width: 67px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 358px;
+            left: 88px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_26 {
+            width: 30px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 358px;
+            left: 403px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_25 {
+            width: 69px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 358px;
+            left: 257px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_6 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 339px;
+            left: 257px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v36_35 {
+            width: 120px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 18px;
+            left: 667px;
+            font-family: Inter;
+            font-weight: 500;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_31 {
+            width: 448px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 234px;
+            left: 45px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 36px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v36_32 {
+            width: 123px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 304px;
+            left: 660px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 40px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v25_7 {
+            width: 40px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 339px;
+            left: 402px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 15px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_27 {
+            width: 32px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 372px;
+            left: 433px;
+            font-family: Inter;
+            font-weight: 500;
+            font-size: 13px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v26_30 {
+            width: 448px;
+            height: 80px;
+            background: rgba(217,217,217,0);
+            opacity: 1;
+            position: absolute;
+            top: 222px;
+            left: 37px;
+            border: 1px solid rgba(0,0,0,1);
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .v29_74 {
+            width: 281px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 97px;
+            left: 233px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 96px;
+            opacity: 1;
+            text-align: left;
+        }
+        
+        .v30_81 {
+            width: 200px;
+            height: 200px;
+            background: rgba(0,0,0,1);
+            opacity: 1;
+            position: absolute;
+            top: 71px;
+            left: 560px;
+            border-radius: 50%;
+        }
+        
+        .v30_84 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 89px;
+            left: 621px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 40px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_86 {
+            width: 108px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 213px;
+            left: 611px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 16px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_84 {
+            width: 76px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 89px;
+            left: 621px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 40px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_86 {
+            width: 108px;
+            color: rgba(255,255,255,1);
+            position: absolute;
+            top: 213px;
+            left: 611px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 16px;
+            opacity: 1;
+            text-align: center;
+        }
+        
+        .v30_85 {
+            width: 140px;
+            color: rgba(255,255,0,1);
+            position: absolute;
+            top: 135px;
+            left: 590px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 80px;
+            opacity: 1;
+            text-align: center;
+            line-height: 1;
+        }
+        
+        .v38_39 {
+            width: 459px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 434px;
+            left: 310px;
+            font-family: Inter;
+            font-weight: 500;
+            font-style: italic;
+            font-size: 24px;
+            opacity: 1;
+            text-align: left;
+            white-space: nowrap;
+        }
+        
+        .v29_75 {
+            width: 320px;
+            color: rgba(0,0,0,1);
+            position: absolute;
+            top: 58px;
+            left: 242px;
+            font-family: Inter;
+            font-weight: Bold;
+            font-size: 32px;
+            opacity: 1;
+            text-align: left;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="v36_37">
+        <div class="v13_6026"></div>
+        <span class="v13_6031">${data.date} | HANOI, VIETNAM</span>
+        <span class="v78_12">INTRO TO CECS</span>
+        <div class="v14_6033"></div>
+        <div class="v25_2"></div>
+        <div class="v25_3"></div>
+        <span class="v25_5">Humidity</span>
+        <span class="v25_24">${data.humidity} %</span>
+        <span class="v26_26">${data.windSpeed}</span>
+        <span class="v25_25">${data.feelsLike}° C</span>
+        <span class="v25_6">Feels Like</span>
+        <span class="v36_35">Update at: ${data.time}</span>
+        <span class="v26_31">${getActionText(data.aqiInfo.status)}</span>
+        <span class="v36_32">${data.aqiInfo.status}</span>
+        <span class="v25_7">Wind</span>
+        <span class="v26_27">km/h</span>
+        <div class="v26_30"></div>
+        <span class="v29_74">${data.temp}°C</span>
+        <div class="v30_81"></div>
+        <span class="v30_84">PM2.5</span>
+        <span class="v30_85" style="color: ${data.aqiInfo.color}">${data.pm25}</span>
+        <span class="v30_86">${data.aqiInfo.status}</span>
+        <span class="v38_39">"A quiet sea never made a skilled sailor."</span>
+        <span class="v29_75">${data.description}</span>
+    </div>
+</body>
+</html>
+    `.trim();
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const startTime = Date.now();
     const isCronRequest = req.headers['user-agent']?.includes('vercel-cron') || 
@@ -87,231 +517,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
         const aqiInfo = getAqiStatus(pm25);
 
-        // Load Inter font (use woff2 format with proper URL)
-        const fontResponse = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/files/inter-latin-400-normal.woff');
-        if (!fontResponse.ok) {
-            throw new Error('Failed to fetch font');
-        }
-        const fontData = await fontResponse.arrayBuffer();
+        const data = {
+            temp,
+            feelsLike,
+            humidity,
+            windSpeed,
+            description,
+            pm25,
+            aqiInfo,
+            date: formatDate(now),
+            time: formatTime(now),
+        };
 
-        // Create SVG using satori
-        const svg = await satori(
-            {
-                type: 'div',
-                props: {
-                    style: {
-                        width: '800px',
-                        height: '480px',
-                        background: 'white',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        fontFamily: 'Inter',
-                    },
-                    children: [
-                        // Header
-                        {
-                            type: 'div',
-                            props: {
-                                style: {
-                                    background: '#1a1a1a',
-                                    padding: '12px 24px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                },
-                                children: [
-                                    {
-                                        type: 'span',
-                                        props: {
-                                            style: { color: '#FFE601', fontSize: '20px', fontWeight: 'bold' },
-                                            children: `${formatDate(now)} | HANOI, VIETNAM`,
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                        // Main content
-                        {
-                            type: 'div',
-                            props: {
-                                style: {
-                                    display: 'flex',
-                                    flex: 1,
-                                    padding: '20px',
-                                },
-                                children: [
-                                    // Left side - Weather
-                                    {
-                                        type: 'div',
-                                        props: {
-                                            style: {
-                                                flex: 1,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                justifyContent: 'center',
-                                            },
-                                            children: [
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { fontSize: '80px', fontWeight: 'bold' },
-                                                        children: `${temp}°C`,
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { fontSize: '24px', color: '#666', marginTop: '8px' },
-                                                        children: description,
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { display: 'flex', gap: '24px', marginTop: '24px' },
-                                                        children: [
-                                                            {
-                                                                type: 'div',
-                                                                props: {
-                                                                    style: { display: 'flex', flexDirection: 'column' },
-                                                                    children: [
-                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Humidity' } },
-                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${humidity}%` } },
-                                                                    ],
-                                                                },
-                                                            },
-                                                            {
-                                                                type: 'div',
-                                                                props: {
-                                                                    style: { display: 'flex', flexDirection: 'column' },
-                                                                    children: [
-                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Feels Like' } },
-                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${feelsLike}°C` } },
-                                                                    ],
-                                                                },
-                                                            },
-                                                            {
-                                                                type: 'div',
-                                                                props: {
-                                                                    style: { display: 'flex', flexDirection: 'column' },
-                                                                    children: [
-                                                                        { type: 'span', props: { style: { fontSize: '14px', color: '#999' }, children: 'Wind' } },
-                                                                        { type: 'span', props: { style: { fontSize: '20px', fontWeight: 'bold' }, children: `${windSpeed} km/h` } },
-                                                                    ],
-                                                                },
-                                                            },
-                                                        ],
-                                                    },
-                                                },
-                                            ],
-                                        },
-                                    },
-                                    // Right side - AQI
-                                    {
-                                        type: 'div',
-                                        props: {
-                                            style: {
-                                                width: '220px',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                background: '#f5f5f5',
-                                                borderRadius: '12px',
-                                                padding: '20px',
-                                            },
-                                            children: [
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { fontSize: '14px', color: '#666' },
-                                                        children: 'Air Quality (PM2.5)',
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { 
-                                                            fontSize: '64px', 
-                                                            fontWeight: 'bold',
-                                                            color: aqiInfo.color,
-                                                            marginTop: '8px',
-                                                        },
-                                                        children: `${pm25}`,
-                                                    },
-                                                },
-                                                {
-                                                    type: 'div',
-                                                    props: {
-                                                        style: { 
-                                                            fontSize: '18px', 
-                                                            fontWeight: 'bold',
-                                                            color: aqiInfo.color,
-                                                            marginTop: '8px',
-                                                        },
-                                                        children: aqiInfo.status,
-                                                    },
-                                                },
-                                            ],
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                        // Footer
-                        {
-                            type: 'div',
-                            props: {
-                                style: {
-                                    background: '#1a1a1a',
-                                    padding: '12px 24px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                },
-                                children: [
-                                    {
-                                        type: 'span',
-                                        props: {
-                                            style: { color: '#fff', fontSize: '14px' },
-                                            children: 'INTRO TO CECS',
-                                        },
-                                    },
-                                    {
-                                        type: 'span',
-                                        props: {
-                                            style: { color: '#999', fontSize: '12px' },
-                                            children: `Updated: ${formatTime(now)}`,
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                    ],
-                },
-            },
-            {
-                width: 800,
-                height: 480,
-                fonts: [
-                    {
-                        name: 'Inter',
-                        data: fontData,
-                        weight: 400,
-                        style: 'normal',
-                    },
-                ],
-            }
-        );
+        console.log('[image] Generating HTML...');
+        const html = generateHTML(data);
 
-        // Convert SVG to PNG using resvg
-        const resvg = new Resvg(svg, {
-            fitTo: {
-                mode: 'width',
-                value: 800,
+        console.log('[image] Converting HTML to PNG...');
+        
+        // Configure Chromium for Vercel serverless
+        const isVercel = process.env.VERCEL === '1';
+        const chromiumArgs = isVercel
+            ? chromium.args
+            : [
+                  '--no-sandbox',
+                  '--disable-setuid-sandbox',
+                  '--disable-dev-shm-usage',
+                  '--disable-accelerated-2d-canvas',
+                  '--no-first-run',
+                  '--no-zygote',
+                  '--single-process',
+                  '--disable-gpu',
+              ];
+        
+        const executablePath = isVercel ? await chromium.executablePath() : undefined;
+        
+        // Convert HTML to PNG using node-html-to-image
+        const imageBuffer = await nodeHtmlToImage({
+            html: html,
+            type: 'png',
+            quality: 100,
+            puppeteerArgs: {
+                args: chromiumArgs,
+                ...(executablePath && { executablePath }),
             },
-        });
-        const pngData = resvg.render();
-        const pngBuffer = pngData.asPng();
+            waitUntil: 'networkidle0',
+        }) as Buffer;
 
         const generationTime = Date.now() - startTime;
         console.log(`[image] ${isCronRequest ? '[CRON]' : '[REQUEST]'} Image generated successfully in ${generationTime}ms`);
@@ -327,7 +577,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.log(`[image] [CRON] Image pre-generated at ${new Date().toISOString()}`);
         }
         
-        return res.send(Buffer.from(pngBuffer));
+        return res.send(imageBuffer);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[image] Error generating image:`, errorMessage);
