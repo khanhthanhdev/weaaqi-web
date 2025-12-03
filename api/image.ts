@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodeHtmlToImage from 'node-html-to-image';
 // Import chromium to ensure it's included in the bundle
-import chromium from '@sparticuz/chromium-min';
+import chromium from '@sparticuz/chromium';
 
 // Ensure chromium is loaded (prevents tree-shaking)
 if (!chromium) {
-    throw new Error('Failed to load @sparticuz/chromium-min package');
+    throw new Error('Failed to load @sparticuz/chromium package');
 }
 
 // Fetch weather data
@@ -644,10 +644,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     // On Vercel, we cannot proceed without executable path
                     throw new Error(
                         `Failed to resolve Chromium executable path on Vercel: ${pathErrorMsg}. ` +
-                        `The @sparticuz/chromium-min package binary files may not be included in the deployment. ` +
-                        `Try: 1) Ensure @sparticuz/chromium-min is in dependencies (not devDependencies), ` +
+                        `The @sparticuz/chromium package binary files may not be included in the deployment. ` +
+                        `Try: 1) Ensure @sparticuz/chromium is in dependencies (not devDependencies), ` +
                         `2) Check Vercel build logs to ensure the package is installed, ` +
-                        `3) Consider switching to @sparticuz/chromium (non-min version) if the issue persists.`
+                        `3) Verify the package version is compatible with Vercel's serverless environment.`
                     );
                 }
             } else {
@@ -709,7 +709,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Provide more helpful error message
             if (errorMsg.includes('does not exist') || errorMsg.includes('ENOENT')) {
                 throw new Error(
-                    `Chromium binary not found. This usually means @sparticuz/chromium-min binary files weren't included in the deployment. ` +
+                    `Chromium binary not found. This usually means @sparticuz/chromium binary files weren't included in the deployment. ` +
                     `Error: ${errorMsg}`
                 );
             }
