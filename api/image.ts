@@ -7,8 +7,21 @@ async function fetchWeatherData(apiKey: string) {
     const lat = 21.0285;
     const lon = 105.8542;
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
-    const response = await fetch(url);
-    return response.json();
+    
+    try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to fetch weather data: ${error.message}`);
+        }
+        throw new Error('Failed to fetch weather data: Unknown error');
+    }
 }
 
 // Fetch AQI data
@@ -16,8 +29,21 @@ async function fetchAQIData(apiKey: string) {
     const lat = 21.0285;
     const lon = 105.8542;
     const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`;
-    const response = await fetch(url);
-    return response.json();
+    
+    try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`AQI API error: ${response.status} ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to fetch AQI data: ${error.message}`);
+        }
+        throw new Error('Failed to fetch AQI data: Unknown error');
+    }
 }
 
 // Get AQI status
@@ -495,10 +521,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log(`[image] ${isCronRequest ? '[CRON]' : '[REQUEST]'} Generating image with fresh data...`);
         
         // Fetch data
-        const [weather, aqi] = await Promise.all([
-            fetchWeatherData(apiKey),
-            fetchAQIData(apiKey),
-        ]);
+        let weather, aqi;
+        try {
+            console.log('[image] Fetching weather and AQI data...');
+            [weather, aqi] = await Promise.all([
+                fetchWeatherData(apiKey),
+                fetchAQIData(apiKey),
+            ]);
+            console.log('[image] Data fetched successfully');
+        } catch (fetchError) {
+            const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+            console.error('[image] Failed to fetch data:', errorMessage);
+            throw new Error(`Data fetch failed: ${errorMessage}`);
+        }
         
         // Validate data
         if (!weather || !weather.main) {
