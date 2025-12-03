@@ -7,7 +7,7 @@ bun.lockb
 
 # Build output
 dist/
-
+score/
 # Logs
 *.log
 npm-debug.log*

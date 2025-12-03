@@ -1,15 +1,4 @@
 {
   "buildCommand": "bun run build",
-  "outputDirectory": "dist",
-  "env": {
-    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
-  },
-  "functions": {
-    "api/image.ts": {
-      "maxDuration": 30
-    },
-    "api/og.jsx": {
-      "maxDuration": 10
-    }
-  }
+  "outputDirectory": "dist"
 }
