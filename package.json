@@ -8,10 +8,16 @@
     "puppeteer-core": "^15.5.0",
     "@sparticuz/chromium": "^131.0.0"
   },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "build": "echo \"No build step required\""
+    "build": "echo \"No build step required\"",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "worker:deploy:prod": "wrangler deploy --env production"
   },
   "repository": {
     "type": "git",

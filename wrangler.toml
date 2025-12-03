@@ -1,0 +1,30 @@
+name = "weaaqi-page"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "weaaqi-page"
+
+[env.development]
+name = "weaaqi-page-dev"
+
+# Environment variables (set via `wrangler secret put` or Cloudflare dashboard)
+# [vars]
+# OPENWEATHER_API_KEY = "your-api-key-here"
+
+# KV Namespaces (if needed for caching)
+# [[kv_namespaces]]
+# binding = "WEATHER_CACHE"
+# id = "your-kv-namespace-id"
+
+# Durable Objects (if needed)
+# [[durable_objects.bindings]]
+# name = "WEATHER_DO"
+# class_name = "WeatherDO"
+# script_name = "weaaqi-page"
+
+# Limits
+[limits]
+cpu_ms = 50
+
