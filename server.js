@@ -487,19 +487,21 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`View HTML: http://localhost:${PORT}/`);
-  console.log(`Generate Image: http://localhost:${PORT}/api/image`);
-  if (OPENWEATHER_API_KEY) {
-    console.log(`\n✓ OpenWeather API key found - using real weather data`);
-  } else {
-    console.log(`\n⚠ OpenWeather API key not found - using default data`);
-    console.log(`Set OPENWEATHER_API_KEY environment variable to fetch real data`);
-  }
-  console.log(`\nExample with custom data (overrides real data):`);
-  console.log(`http://localhost:${PORT}/api/image?temperature=30&humidity=60&condition=SUNNY`);
-});
+// Start server only if not in serverless environment (Vercel)
+if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`View HTML: http://localhost:${PORT}/`);
+    console.log(`Generate Image: http://localhost:${PORT}/api/image`);
+    if (OPENWEATHER_API_KEY) {
+      console.log(`\n✓ OpenWeather API key found - using real weather data`);
+    } else {
+      console.log(`\n⚠ OpenWeather API key not found - using default data`);
+      console.log(`Set OPENWEATHER_API_KEY environment variable to fetch real data`);
+    }
+    console.log(`\nExample with custom data (overrides real data):`);
+    console.log(`http://localhost:${PORT}/api/image?temperature=30&humidity=60&condition=SUNNY`);
+  });
+}
 
 module.exports = app;
