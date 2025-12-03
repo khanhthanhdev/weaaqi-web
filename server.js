@@ -37,20 +37,69 @@ const PORT = process.env.PORT || 3000;
 // Helper function to get Puppeteer launch options
 // Works in both local and serverless environments
 async function getPuppeteerLaunchOptions() {
-  const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  // Better serverless detection - check multiple indicators
+  const cwd = process.cwd();
+  const isServerless = 
+    process.env.VERCEL === '1' || 
+    process.env.VERCEL_ENV ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT ||
+    cwd.includes('/var/task') ||
+    cwd.includes('/tmp') ||
+    cwd.includes('/vercel') ||
+    // Check if we're in a serverless runtime
+    (process.env.NODE_ENV === 'production' && !process.env.CHROME_PATH);
+  
+  console.log('Environment detection:', {
+    isServerless,
+    cwd,
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
+    LAMBDA_TASK_ROOT: process.env.LAMBDA_TASK_ROOT,
+    NODE_ENV: process.env.NODE_ENV,
+  });
   
   if (isServerless) {
     // Configure Chromium for serverless
     chromium.setGraphicsMode = false;
-    return {
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    };
+    
+    try {
+      // Get Chromium executable path
+      const executablePath = await chromium.executablePath();
+      
+      // Verify the executable exists
+      if (!executablePath) {
+        throw new Error('Chromium executable path is empty');
+      }
+      
+      console.log('Using serverless Chromium configuration');
+      console.log('Executable path:', executablePath);
+      console.log('Chromium args:', chromium.args);
+      
+      return {
+        args: [
+          ...chromium.args,
+          '--disable-gpu',
+          '--disable-dev-shm-usage',
+          '--disable-software-rasterizer',
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
+        ],
+        defaultViewport: chromium.defaultViewport,
+        executablePath: executablePath,
+        headless: chromium.headless,
+      };
+    } catch (error) {
+      console.error('Error getting Chromium executable path:', error);
+      throw new Error(`Failed to initialize Chromium for serverless: ${error.message}. Make sure @sparticuz/chromium is properly installed.`);
+    }
   } else {
     // Local development - try to use system Chrome/Chromium
     // On Linux, you might need to install chromium-browser or google-chrome
+    console.log('Using local Chromium configuration');
     return {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -406,6 +455,7 @@ app.get('/api/image', async (req, res) => {
 
     // Launch Puppeteer with appropriate configuration
     const launchOptions = await getPuppeteerLaunchOptions();
+    console.log('Launch options:', JSON.stringify(launchOptions, null, 2));
     browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
@@ -468,6 +518,7 @@ app.post('/api/image', async (req, res) => {
     }
 
     const launchOptions = await getPuppeteerLaunchOptions();
+    console.log('Launch options:', JSON.stringify(launchOptions, null, 2));
     browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
@@ -501,7 +552,18 @@ app.post('/api/image', async (req, res) => {
 
   } catch (error) {
     console.error('Error generating image:', error);
-    res.status(500).json({ error: 'Failed to generate image' });
+    console.error('Error stack:', error.stack);
+    console.error('Current working directory:', process.cwd());
+    console.error('Environment:', {
+      VERCEL: process.env.VERCEL,
+      AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
+      LAMBDA_TASK_ROOT: process.env.LAMBDA_TASK_ROOT,
+    });
+    res.status(500).json({ 
+      error: 'Failed to generate image',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   } finally {
     if (browser) {
       await browser.close();
