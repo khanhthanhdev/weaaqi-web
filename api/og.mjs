@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ImageResponse } from '@vercel/og';
 import {
     fetchWeatherData,
@@ -10,9 +9,7 @@ import {
     formatTime,
     kmhFromMs,
     CONFIG,
-    type WeatherData,
-    type AQIData,
-} from './weather-utils';
+} from './weather-utils.js';
 
 // Load Inter font from Google Fonts
 // Note: @vercel/og supports TTF, OTF, and WOFF formats (not WOFF2)
@@ -27,7 +24,7 @@ async function loadInterFont() {
     return null;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
     const startTime = Date.now();
     const isCronRequest = req.headers['user-agent']?.includes('vercel-cron') || 
                           req.headers['x-vercel-cron'] === '1';
@@ -94,7 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             {
                 name: 'Inter',
                 data: interFont,
-                style: 'normal' as const,
+                style: 'normal',
                 weight: 400,
             },
         ] : [];

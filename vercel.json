@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/image", "destination": "/api/image" },
-    { "source": "/api/og", "destination": "/api/og" }
+    { "source": "/api/og", "destination": "/api/og.mjs" }
   ],
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
@@ -12,7 +12,7 @@
     "api/image.ts": {
       "maxDuration": 30
     },
-    "api/og.tsx": {
+    "api/og.mjs": {
       "maxDuration": 10
     }
   }
