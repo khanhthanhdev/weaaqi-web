@@ -41,7 +41,7 @@ async function getPuppeteerLaunchOptions() {
   
   if (isServerless) {
     // Configure Chromium for serverless
-    chromium.setGraphicsMode(false);
+    chromium.setGraphicsMode = false;
     return {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
