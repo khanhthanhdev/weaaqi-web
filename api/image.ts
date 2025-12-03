@@ -1,6 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodeHtmlToImage from 'node-html-to-image';
+// Import chromium to ensure it's included in the bundle
 import chromium from '@sparticuz/chromium-min';
+
+// Ensure chromium is loaded (prevents tree-shaking)
+if (!chromium) {
+    throw new Error('Failed to load @sparticuz/chromium-min package');
+}
 
 // Fetch weather data
 async function fetchWeatherData(apiKey: string) {
@@ -570,33 +576,122 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('[image] Converting HTML to PNG...');
         
         // Configure Chromium for Vercel serverless
-        const isVercel = process.env.VERCEL === '1';
-        const chromiumArgs = isVercel
-            ? chromium.args
-            : [
-                  '--no-sandbox',
-                  '--disable-setuid-sandbox',
-                  '--disable-dev-shm-usage',
-                  '--disable-accelerated-2d-canvas',
-                  '--no-first-run',
-                  '--no-zygote',
-                  '--single-process',
-                  '--disable-gpu',
-              ];
+        const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+        let chromiumArgs: string[];
+        let executablePath: string | undefined;
         
-        const executablePath = isVercel ? await chromium.executablePath() : undefined;
+        try {
+            if (isVercel) {
+                // On Vercel, use chromium-min
+                console.log('[image] Configuring Chromium for Vercel environment...');
+                
+                // Ensure chromium is available
+                if (!chromium || !chromium.args) {
+                    throw new Error('Chromium package not properly loaded');
+                }
+                
+                chromiumArgs = chromium.args;
+                console.log(`[image] Chromium args: ${chromiumArgs.length} arguments`);
+                
+                // Get executable path - handle both sync and async versions
+                try {
+                    if (typeof chromium.executablePath === 'function') {
+                        const pathResult = chromium.executablePath();
+                        if (pathResult instanceof Promise) {
+                            executablePath = await pathResult;
+                        } else {
+                            executablePath = pathResult as string;
+                        }
+                    } else {
+                        throw new Error('chromium.executablePath is not a function');
+                    }
+                    
+                    console.log(`[image] Chromium executable path resolved: ${executablePath}`);
+                    
+                    if (!executablePath) {
+                        throw new Error('Chromium executable path is empty');
+                    }
+                } catch (pathError) {
+                    const pathErrorMsg = pathError instanceof Error ? pathError.message : String(pathError);
+                    console.error('[image] Failed to get Chromium executable path:', pathErrorMsg);
+                    console.error('[image] Chromium package info:', {
+                        hasArgs: !!chromium.args,
+                        hasExecutablePath: typeof chromium.executablePath === 'function',
+                        executablePathType: typeof chromium.executablePath,
+                        chromiumKeys: Object.keys(chromium || {}),
+                    });
+                    
+                    // Don't throw immediately - try to continue without explicit path
+                    // Sometimes puppeteer can find chromium automatically
+                    console.warn('[image] Continuing without explicit executable path - puppeteer may find it automatically');
+                    executablePath = undefined;
+                }
+            } else {
+                // Local development
+                console.log('[image] Configuring Chromium for local development...');
+                chromiumArgs = [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-gpu',
+                ];
+                executablePath = undefined; // Use system Chrome/Chromium
+            }
+        } catch (chromiumError) {
+            const errorMessage = chromiumError instanceof Error ? chromiumError.message : String(chromiumError);
+            console.error('[image] Chromium configuration error:', errorMessage);
+            throw new Error(`Chromium setup failed: ${errorMessage}`);
+        }
+        
+        // Prepare puppeteer args
+        const puppeteerConfig: any = {
+            args: chromiumArgs,
+        };
+        
+        if (executablePath) {
+            puppeteerConfig.executablePath = executablePath;
+        }
+        
+        console.log('[image] Launching Puppeteer with config:', {
+            argsCount: puppeteerConfig.args.length,
+            hasExecutablePath: !!puppeteerConfig.executablePath,
+            executablePath: puppeteerConfig.executablePath || 'using system default',
+        });
         
         // Convert HTML to PNG using node-html-to-image
-        const imageBuffer = await nodeHtmlToImage({
-            html: html,
-            type: 'png',
-            quality: 100,
-            puppeteerArgs: {
-                args: chromiumArgs,
-                ...(executablePath && { executablePath }),
-            },
-            waitUntil: 'networkidle0',
-        }) as Buffer;
+        let imageBuffer: Buffer;
+        try {
+            imageBuffer = await nodeHtmlToImage({
+                html: html,
+                type: 'png',
+                quality: 100,
+                puppeteerArgs: puppeteerConfig,
+                waitUntil: 'networkidle0',
+            }) as Buffer;
+        } catch (imageGenError) {
+            const errorMsg = imageGenError instanceof Error ? imageGenError.message : String(imageGenError);
+            const errorStack = imageGenError instanceof Error ? imageGenError.stack : undefined;
+            
+            console.error('[image] Image generation failed:', errorMsg);
+            if (errorStack) {
+                console.error('[image] Stack trace:', errorStack);
+            }
+            console.error('[image] Puppeteer config used:', JSON.stringify(puppeteerConfig, null, 2));
+            
+            // Provide more helpful error message
+            if (errorMsg.includes('does not exist') || errorMsg.includes('ENOENT')) {
+                throw new Error(
+                    `Chromium binary not found. This usually means @sparticuz/chromium-min binary files weren't included in the deployment. ` +
+                    `Error: ${errorMsg}`
+                );
+            }
+            
+            throw new Error(`Image generation failed: ${errorMsg}`);
+        }
 
         const generationTime = Date.now() - startTime;
         console.log(`[image] ${isCronRequest ? '[CRON]' : '[REQUEST]'} Image generated successfully in ${generationTime}ms`);
