@@ -2,7 +2,8 @@
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/image", "destination": "/api/image" }
+    { "source": "/api/image", "destination": "/api/image" },
+    { "source": "/api/og", "destination": "/api/og" }
   ],
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
@@ -10,6 +11,9 @@
   "functions": {
     "api/image.ts": {
       "maxDuration": 30
+    },
+    "api/og.tsx": {
+      "maxDuration": 10
     }
   }
 }

@@ -1,514 +1,188 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodeHtmlToImage from 'node-html-to-image';
+import { readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 // Import chromium to ensure it's included in the bundle
 import chromium from '@sparticuz/chromium';
+import {
+    fetchWeatherData,
+    fetchAQIData,
+    pickWeatherAction,
+    pickAQIAction,
+    getAqiActionForWeather,
+    formatDate,
+    formatTime,
+    kmhFromMs,
+    CONFIG,
+    type WeatherData,
+    type AQIData,
+} from './weather-utils';
 
 // Ensure chromium is loaded (prevents tree-shaking)
 if (!chromium) {
     throw new Error('Failed to load @sparticuz/chromium package');
 }
 
-// Fetch weather data
-async function fetchWeatherData(apiKey: string) {
-    const lat = 21.0285;
-    const lon = 105.8542;
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+// Load template files
+function loadTemplateFiles() {
+    const templateDir = join(process.cwd(), 'figma-to-html');
+    const htmlPath = join(templateDir, 'index.html');
+    const cssPath = join(templateDir, 'css', 'main.css');
+    const imagesDir = join(templateDir, 'images');
+    
+    const html = readFileSync(htmlPath, 'utf-8');
+    const css = readFileSync(cssPath, 'utf-8');
+    
+    return { html, css, imagesDir };
+}
+
+// Convert image files to base64 data URLs
+function convertImagesToDataUrls(imagesDir: string): Record<string, string> {
+    const imageDataUrls: Record<string, string> = {};
     
     try {
-        const response = await fetch(url);
+        const imageFiles = readdirSync(imagesDir).filter(file => 
+            file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')
+        );
         
-        if (!response.ok) {
-            throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
+        for (const filename of imageFiles) {
+            const imagePath = join(imagesDir, filename);
+            const imageBuffer = readFileSync(imagePath);
+            const base64 = imageBuffer.toString('base64');
+            const ext = filename.split('.').pop()?.toLowerCase() || 'png';
+            const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+            imageDataUrls[filename] = `data:${mimeType};base64,${base64}`;
         }
-        
-        return await response.json();
     } catch (error) {
-        if (error instanceof Error) {
-            throw new Error(`Failed to fetch weather data: ${error.message}`);
-        }
-        throw new Error('Failed to fetch weather data: Unknown error');
+        console.warn('[image] Failed to load images, continuing without them:', error);
     }
-}
-
-// Fetch AQI data
-async function fetchAQIData(apiKey: string) {
-    const lat = 21.0285;
-    const lon = 105.8542;
-    const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`;
     
-    try {
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`AQI API error: ${response.status} ${response.statusText}`);
-        }
-        
-        return await response.json();
-    } catch (error) {
-        if (error instanceof Error) {
-            throw new Error(`Failed to fetch AQI data: ${error.message}`);
-        }
-        throw new Error('Failed to fetch AQI data: Unknown error');
+    return imageDataUrls;
+}
+
+// Generate HTML from template with data replacements
+function generateHTMLFromTemplate(
+    templateHtml: string,
+    templateCss: string,
+    weather: WeatherData,
+    aqi: AQIData,
+    imageDataUrls: Record<string, string>
+): string {
+    const now = new Date();
+    
+    // Extract data
+    const description = weather.weather?.[0]?.description?.toUpperCase() || 'UNKNOWN';
+    const temp = Math.round(weather.main?.temp || 0);
+    const feelsLike = Math.round(weather.main?.feels_like || temp);
+    const humidity = weather.main?.humidity || 0;
+    const windSpeed = kmhFromMs(weather.wind?.speed || 0);
+    const weatherId = weather.weather?.[0]?.id || 800;
+    const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
+    
+    // Get actions
+    const weatherAction = pickWeatherAction(temp, humidity, weatherId);
+    const baseAqiAction = pickAQIAction(pm25);
+    const aqiAction = getAqiActionForWeather(baseAqiAction, temp);
+    
+    // Format date and time
+    const dateStr = formatDate(now);
+    const timeStr = formatTime(now);
+    
+    // Get AQI color based on status
+    const aqiColor = baseAqiAction.color || '#ffc800';
+    
+    // Replace hardcoded values in template HTML
+    let html = templateHtml;
+    
+    // Replace date and location in v13_6031 span
+    html = html.replace(
+        /<span class="v13_6031">NOV 24, 2025 \| HANOI, VIETNAM<\/span>/,
+        `<span class="v13_6031">${dateStr} | ${CONFIG.locationLabel}</span>`
+    );
+    
+    // Replace temperature in v29_74 span
+    html = html.replace(
+        /<span class="v29_74">26°C<\/span>/,
+        `<span class="v29_74">${temp}°C</span>`
+    );
+    
+    // Replace humidity in v25_24 span
+    html = html.replace(
+        /<span class="v25_24">48 %<\/span>/,
+        `<span class="v25_24">${humidity} %</span>`
+    );
+    
+    // Replace wind speed in v26_26 span
+    html = html.replace(
+        /<span class="v26_26">10<\/span>/,
+        `<span class="v26_26">${windSpeed}</span>`
+    );
+    
+    // Replace feels like in v25_25 span
+    html = html.replace(
+        /<span class="v25_25">26° C<\/span>/,
+        `<span class="v25_25">${feelsLike}° C</span>`
+    );
+    
+    // Replace update time in v36_35 span
+    html = html.replace(
+        /<span class="v36_35">Update at: 14:30<\/span>/,
+        `<span class="v36_35">Update at: ${timeStr}</span>`
+    );
+    
+    // Replace AQI value in v30_85 span (with color)
+    html = html.replace(
+        /<span class="v30_85">150<\/span>/,
+        `<span class="v30_85" style="color: ${aqiColor}">${pm25}</span>`
+    );
+    
+    // Replace AQI status in v30_86 span
+    html = html.replace(
+        /<span class="v30_86">UNHEALTHY<\/span>/,
+        `<span class="v30_86">${baseAqiAction.status}</span>`
+    );
+    
+    // Replace AQI status in v36_32 span (WEAR MASK)
+    html = html.replace(
+        /<span class="v36_32">WEAR MASK<\/span>/,
+        `<span class="v36_32">${aqiAction.action.toUpperCase()}</span>`
+    );
+    
+    // Replace hero action text in v26_31 span (BRING  UMBRELLA)
+    const heroAction = weatherAction?.action?.toUpperCase() || '';
+    html = html.replace(
+        /<span class="v26_31">BRING  UMBRELLA<\/span>/,
+        `<span class="v26_31">${heroAction}</span>`
+    );
+    
+    // Replace condition in v29_75 span
+    html = html.replace(
+        /<span class="v29_75">RAIN\/STORM<\/span>/,
+        `<span class="v29_75">${weatherAction?.condition?.toUpperCase() || description}</span>`
+    );
+    
+    // Replace quote in v38_39 span
+    html = html.replace(
+        /<span class="v38_39">"A quiet sea never made a skilled sailor\."<\/span>/,
+        `<span class="v38_39">"${CONFIG.quote}"</span>`
+    );
+    
+    // Replace image URLs in CSS with data URLs
+    let processedCss = templateCss;
+    for (const [filename, dataUrl] of Object.entries(imageDataUrls)) {
+        processedCss = processedCss.replace(
+            new RegExp(`url\\("?\\.\\.\\/images\\/${filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"?\\)`, 'g'),
+            `url("${dataUrl}")`
+        );
     }
-}
-
-// Get AQI status
-function getAqiStatus(pm25: number) {
-    if (pm25 <= 12) return { status: 'GOOD', color: '#00e400' };
-    if (pm25 <= 35.4) return { status: 'MODERATE', color: '#ffff00' };
-    if (pm25 <= 55.4) return { status: 'UNHEALTHY (SG)', color: '#ff7e00' };
-    if (pm25 <= 150.4) return { status: 'UNHEALTHY', color: '#ff0000' };
-    if (pm25 <= 250.4) return { status: 'VERY UNHEALTHY', color: '#8f3f97' };
-    return { status: 'HAZARDOUS', color: '#7e0023' };
-}
-
-// Format date
-function formatDate(date: Date) {
-    return date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric',
-        year: 'numeric'
-    }).toUpperCase();
-}
-
-// Format time
-function formatTime(date: Date) {
-    return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false
-    });
-}
-
-// Generate HTML from data
-function generateHTML(data: {
-    temp: number;
-    feelsLike: number;
-    humidity: number;
-    windSpeed: number;
-    description: string;
-    pm25: number;
-    aqiInfo: { status: string; color: string };
-    date: string;
-    time: string;
-}): string {
-    // Get action text based on AQI status
-    const getActionText = (status: string) => {
-        if (status.includes('GOOD') || status.includes('MODERATE')) return 'PERFECT WEATHER';
-        return 'WEAR MASK';
-    };
-
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        @import url('https://fonts.googleapis.com/css?family=Inter&display=swap');
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-size: 14px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: #f0f0f0;
-        }
-        
-        .v36_37 {
-            width: 800px;
-            height: 480px;
-            background: rgba(255,255,255,1);
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-size: cover;
-            opacity: 1;
-            position: relative;
-            top: 0px;
-            left: 0px;
-            overflow: hidden;
-        }
-        
-        .v13_6026 {
-            width: 800px;
-            height: 480px;
-            background: rgba(255,255,255,1);
-            opacity: 1;
-            position: relative;
-            top: 0px;
-            left: 0px;
-            overflow: hidden;
-        }
-        
-        .v13_6031 {
-            width: 391px;
-            color: rgba(255,255,0,1);
-            position: absolute;
-            top: 13px;
-            left: 189px;
-            font-family: Inter;
-            font-weight: 900;
-            font-size: 24px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v78_12 {
-            width: 251px;
-            color: rgba(0,0,0,1);
-            position: absolute;
-            top: 435px;
-            left: 14px;
-            font-family: Inter;
-            font-weight: 900;
-            font-size: 24px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v14_6033 {
-            width: 134px;
-            height: 66px;
-            background: rgba(0,0,0,1);
-            opacity: 1;
-            position: absolute;
-            top: 331px;
-            left: 37px;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .v25_2 {
-            width: 151px;
-            height: 66px;
-            background: rgba(0,0,0,1);
-            opacity: 1;
-            position: absolute;
-            top: 331px;
-            left: 189px;
-        }
-        
-        .v25_3 {
-            width: 123px;
-            height: 66px;
-            background: rgba(0,0,0,1);
-            opacity: 1;
-            position: absolute;
-            top: 331px;
-            left: 350px;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .v25_5 {
-            width: 76px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 339px;
-            left: 88px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 15px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v25_24 {
-            width: 67px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 358px;
-            left: 88px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 24px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v26_26 {
-            width: 30px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 358px;
-            left: 403px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 24px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v25_25 {
-            width: 69px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 358px;
-            left: 257px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 24px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v25_6 {
-            width: 76px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 339px;
-            left: 257px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 15px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v36_35 {
-            width: 120px;
-            color: rgba(0,0,0,1);
-            position: absolute;
-            top: 18px;
-            left: 667px;
-            font-family: Inter;
-            font-weight: 500;
-            font-size: 15px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v26_31 {
-            width: 448px;
-            color: rgba(0,0,0,1);
-            position: absolute;
-            top: 234px;
-            left: 45px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 36px;
-            opacity: 1;
-            text-align: center;
-        }
-        
-        .v36_32 {
-            width: 123px;
-            color: rgba(0,0,0,1);
-            position: absolute;
-            top: 304px;
-            left: 660px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 40px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v25_7 {
-            width: 40px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 339px;
-            left: 402px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 15px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v26_27 {
-            width: 32px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 372px;
-            left: 433px;
-            font-family: Inter;
-            font-weight: 500;
-            font-size: 13px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v26_30 {
-            width: 448px;
-            height: 80px;
-            background: rgba(217,217,217,0);
-            opacity: 1;
-            position: absolute;
-            top: 222px;
-            left: 37px;
-            border: 1px solid rgba(0,0,0,1);
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .v29_74 {
-            width: 281px;
-            color: rgba(0,0,0,1);
-            position: absolute;
-            top: 97px;
-            left: 233px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 96px;
-            opacity: 1;
-            text-align: left;
-        }
-        
-        .v30_81 {
-            width: 200px;
-            height: 200px;
-            background: rgba(0,0,0,1);
-            opacity: 1;
-            position: absolute;
-            top: 71px;
-            left: 560px;
-            border-radius: 50%;
-        }
-        
-        .v30_84 {
-            width: 76px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 89px;
-            left: 621px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 40px;
-            opacity: 1;
-            text-align: center;
-        }
-        
-        .v30_86 {
-            width: 108px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 213px;
-            left: 611px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 16px;
-            opacity: 1;
-            text-align: center;
-        }
-        
-        .v30_84 {
-            width: 76px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 89px;
-            left: 621px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 40px;
-            opacity: 1;
-            text-align: center;
-        }
-        
-        .v30_86 {
-            width: 108px;
-            color: rgba(255,255,255,1);
-            position: absolute;
-            top: 213px;
-            left: 611px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 16px;
-            opacity: 1;
-            text-align: center;
-        }
-        
-        .v30_85 {
-            width: 140px;
-            color: rgba(255,255,0,1);
-            position: absolute;
-            top: 135px;
-            left: 590px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 80px;
-            opacity: 1;
-            text-align: center;
-            line-height: 1;
-        }
-        
-        .v38_39 {
-            width: 459px;
-            color: rgba(0,0,0,1);
-            position: absolute;
-            top: 434px;
-            left: 310px;
-            font-family: Inter;
-            font-weight: 500;
-            font-style: italic;
-            font-size: 24px;
-            opacity: 1;
-            text-align: left;
-            white-space: nowrap;
-        }
-        
-        .v29_75 {
-            width: 320px;
-            color: rgba(0,0,0,1);
-            position: absolute;
-            top: 58px;
-            left: 242px;
-            font-family: Inter;
-            font-weight: Bold;
-            font-size: 32px;
-            opacity: 1;
-            text-align: left;
-            white-space: nowrap;
-        }
-    </style>
-</head>
-<body>
-    <div class="v36_37">
-        <div class="v13_6026"></div>
-        <span class="v13_6031">${data.date} | HANOI, VIETNAM</span>
-        <span class="v78_12">INTRO TO CECS</span>
-        <div class="v14_6033"></div>
-        <div class="v25_2"></div>
-        <div class="v25_3"></div>
-        <span class="v25_5">Humidity</span>
-        <span class="v25_24">${data.humidity} %</span>
-        <span class="v26_26">${data.windSpeed}</span>
-        <span class="v25_25">${data.feelsLike}° C</span>
-        <span class="v25_6">Feels Like</span>
-        <span class="v36_35">Update at: ${data.time}</span>
-        <span class="v26_31">${getActionText(data.aqiInfo.status)}</span>
-        <span class="v36_32">${data.aqiInfo.status}</span>
-        <span class="v25_7">Wind</span>
-        <span class="v26_27">km/h</span>
-        <div class="v26_30"></div>
-        <span class="v29_74">${data.temp}°C</span>
-        <div class="v30_81"></div>
-        <span class="v30_84">PM2.5</span>
-        <span class="v30_85" style="color: ${data.aqiInfo.color}">${data.pm25}</span>
-        <span class="v30_86">${data.aqiInfo.status}</span>
-        <span class="v38_39">"A quiet sea never made a skilled sailor."</span>
-        <span class="v29_75">${data.description}</span>
-    </div>
-</body>
-</html>
-    `.trim();
+    
+    // Inline CSS
+    html = html.replace(
+        /<link href="\.\/css\/main\.css" rel="stylesheet" \/>/,
+        `<style>${processedCss}</style>`
+    );
+    
+    return html;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -549,29 +223,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             throw new Error('Invalid AQI data received');
         }
 
-        const now = new Date();
-        const temp = Math.round(weather.main?.temp || 0);
-        const feelsLike = Math.round(weather.main?.feels_like || temp);
-        const humidity = weather.main?.humidity || 0;
-        const windSpeed = Math.round((weather.wind?.speed || 0) * 3.6);
-        const description = weather.weather?.[0]?.description?.toUpperCase() || 'UNKNOWN';
-        const pm25 = Math.round(aqi.list?.[0]?.components?.pm2_5 || 0);
-        const aqiInfo = getAqiStatus(pm25);
-
-        const data = {
-            temp,
-            feelsLike,
-            humidity,
-            windSpeed,
-            description,
-            pm25,
-            aqiInfo,
-            date: formatDate(now),
-            time: formatTime(now),
-        };
-
-        console.log('[image] Generating HTML...');
-        const html = generateHTML(data);
+        console.log('[image] Loading template files...');
+        const { html: templateHtml, css: templateCss, imagesDir } = loadTemplateFiles();
+        
+        console.log('[image] Converting images to data URLs...');
+        const imageDataUrls = convertImagesToDataUrls(imagesDir);
+        
+        console.log('[image] Generating HTML from template...');
+        const html = generateHTMLFromTemplate(templateHtml, templateCss, weather, aqi, imageDataUrls);
 
         console.log('[image] Converting HTML to PNG...');
         
