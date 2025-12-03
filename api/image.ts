@@ -594,23 +594,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 console.log(`[image] Chromium args: ${chromiumArgs.length} arguments`);
                 
                 // Get executable path - handle both sync and async versions
+                // On Vercel, we MUST have the executable path
                 try {
                     if (typeof chromium.executablePath === 'function') {
-                        const pathResult = chromium.executablePath();
-                        if (pathResult instanceof Promise) {
-                            executablePath = await pathResult;
-                        } else {
-                            executablePath = pathResult as string;
+                        // Try to call executablePath - it may throw if binary isn't extracted yet
+                        try {
+                            const pathResult = chromium.executablePath();
+                            if (pathResult instanceof Promise) {
+                                executablePath = await pathResult;
+                            } else {
+                                executablePath = pathResult as string;
+                            }
+                        } catch (extractionError) {
+                            // The binary might need to be extracted first
+                            // Try waiting a moment and retrying (extraction happens on first access)
+                            console.warn('[image] Chromium binary extraction may be in progress, waiting...');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            
+                            // Retry after waiting
+                            const pathResult = chromium.executablePath();
+                            if (pathResult instanceof Promise) {
+                                executablePath = await pathResult;
+                            } else {
+                                executablePath = pathResult as string;
+                            }
                         }
                     } else {
                         throw new Error('chromium.executablePath is not a function');
                     }
                     
-                    console.log(`[image] Chromium executable path resolved: ${executablePath}`);
-                    
-                    if (!executablePath) {
+                    if (!executablePath || executablePath.length === 0) {
                         throw new Error('Chromium executable path is empty');
                     }
+                    
+                    console.log(`[image] Chromium executable path resolved: ${executablePath}`);
                 } catch (pathError) {
                     const pathErrorMsg = pathError instanceof Error ? pathError.message : String(pathError);
                     console.error('[image] Failed to get Chromium executable path:', pathErrorMsg);
@@ -619,12 +636,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         hasExecutablePath: typeof chromium.executablePath === 'function',
                         executablePathType: typeof chromium.executablePath,
                         chromiumKeys: Object.keys(chromium || {}),
+                        nodeVersion: process.version,
+                        platform: process.platform,
+                        arch: process.arch,
                     });
                     
-                    // Don't throw immediately - try to continue without explicit path
-                    // Sometimes puppeteer can find chromium automatically
-                    console.warn('[image] Continuing without explicit executable path - puppeteer may find it automatically');
-                    executablePath = undefined;
+                    // On Vercel, we cannot proceed without executable path
+                    throw new Error(
+                        `Failed to resolve Chromium executable path on Vercel: ${pathErrorMsg}. ` +
+                        `The @sparticuz/chromium-min package binary files may not be included in the deployment. ` +
+                        `Try: 1) Ensure @sparticuz/chromium-min is in dependencies (not devDependencies), ` +
+                        `2) Check Vercel build logs to ensure the package is installed, ` +
+                        `3) Consider switching to @sparticuz/chromium (non-min version) if the issue persists.`
+                    );
                 }
             } else {
                 // Local development
