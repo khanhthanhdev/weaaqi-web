@@ -28,10 +28,41 @@ try {
 }
 
 const express = require('express');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Helper function to get Puppeteer launch options
+// Works in both local and serverless environments
+async function getPuppeteerLaunchOptions() {
+  const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  
+  if (isServerless) {
+    // Configure Chromium for serverless
+    chromium.setGraphicsMode(false);
+    return {
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    };
+  } else {
+    // Local development - try to use system Chrome/Chromium
+    // On Linux, you might need to install chromium-browser or google-chrome
+    return {
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      // Try common Chrome/Chromium paths
+      executablePath: process.env.CHROME_PATH || 
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        (process.platform === 'linux' ? '/usr/bin/chromium-browser' : undefined) ||
+        (process.platform === 'linux' ? '/usr/bin/google-chrome' : undefined) ||
+        (process.platform === 'linux' ? '/usr/bin/chromium' : undefined)
+    };
+  }
+}
 
 // OpenWeather API configuration
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY || process.env.WEATHER_API_KEY;
@@ -373,11 +404,9 @@ app.get('/api/image', async (req, res) => {
       }
     }
 
-    // Launch Puppeteer
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    // Launch Puppeteer with appropriate configuration
+    const launchOptions = await getPuppeteerLaunchOptions();
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     
@@ -438,10 +467,8 @@ app.post('/api/image', async (req, res) => {
       }
     }
 
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    const launchOptions = await getPuppeteerLaunchOptions();
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     await page.setViewport({

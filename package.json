@@ -5,7 +5,8 @@
   "main": "env-config.js",
   "dependencies": {
     "express": "^5.2.1",
-    "puppeteer": "^15.5.0"
+    "puppeteer-core": "^15.5.0",
+    "@sparticuz/chromium": "^131.0.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
