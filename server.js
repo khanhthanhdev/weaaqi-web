@@ -352,8 +352,8 @@ const getHTML = (data = {}, useBase64Images = false) => {
     html, body {
       margin: 0;
       padding: 0;
-      width: 480px;
-      height: 800px;
+      width: 384px;
+      height: 640px;
       overflow: hidden;
       background: #ffffff;
     }
@@ -363,7 +363,7 @@ const getHTML = (data = {}, useBase64Images = false) => {
       min-height: auto;
     }
     .v36_37 {
-      transform: rotate(90deg) translateY(-480px);
+      transform: rotate(90deg) translateY(-384px);
       transform-origin: top left;
       position: absolute;
       top: 0;
@@ -380,15 +380,15 @@ const getHTML = (data = {}, useBase64Images = false) => {
     css = css.replace(/background:\s*#f0f0f0/g, 'background: #ffffff');
     css += `
     html, body {
-      width: 480px;
-      height: 800px;
+      width: 384px;
+      height: 640px;
       margin: 0;
       padding: 0;
       overflow: hidden;
       display: block;
     }
     .v36_37 {
-      transform: rotate(90deg) translateY(-480px);
+      transform: scale(0.8) rotate(90deg) translateY(-480px);
       transform-origin: top left;
     }
     `;
@@ -479,8 +479,8 @@ app.get('/api/image', async (req, res) => {
     
     // Set viewport to exact template size
     await page.setViewport({
-      width: 480,
-      height: 800,
+      width: 384,
+      height: 640,
       deviceScaleFactor: 1 // Use 1 for exact size match
     });
 
@@ -500,8 +500,8 @@ app.get('/api/image', async (req, res) => {
       clip: {
         x: 0,
         y: 0,
-        width: 480,
-        height: 800
+        width: 384,
+        height: 640
       }
     });
 
@@ -540,8 +540,8 @@ app.post('/api/image', async (req, res) => {
 
     const page = await browser.newPage();
     await page.setViewport({
-      width: 480,
-      height: 800,
+      width: 384,
+      height: 640,
       deviceScaleFactor: 1
     });
 
@@ -558,8 +558,8 @@ app.post('/api/image', async (req, res) => {
       clip: {
         x: 0,
         y: 0,
-        width: 480,
-        height: 800
+        width: 384,
+        height: 640
       }
     });
 
