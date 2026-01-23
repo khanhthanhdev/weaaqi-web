@@ -352,8 +352,8 @@ const getHTML = (data = {}, useBase64Images = false) => {
     html, body {
       margin: 0;
       padding: 0;
-      width: 800px;
-      height: 480px;
+      width: 480px;
+      height: 800px;
       overflow: hidden;
       background: #ffffff;
     }
@@ -363,6 +363,8 @@ const getHTML = (data = {}, useBase64Images = false) => {
       min-height: auto;
     }
     .v36_37 {
+      transform: rotate(90deg) translateY(-480px);
+      transform-origin: top left;
       position: absolute;
       top: 0;
       left: 0;
@@ -374,7 +376,22 @@ const getHTML = (data = {}, useBase64Images = false) => {
       return `url(/figma-to-html/images/${imgName})`;
     });
     // Ensure body background is white (not gray) for browser view
+    // And apply rotation for browser view as well (for Inkycal Webshot)
     css = css.replace(/background:\s*#f0f0f0/g, 'background: #ffffff');
+    css += `
+    html, body {
+      width: 480px;
+      height: 800px;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: block;
+    }
+    .v36_37 {
+      transform: rotate(90deg) translateY(-480px);
+      transform-origin: top left;
+    }
+    `;
   }
 
   return `
@@ -462,8 +479,8 @@ app.get('/api/image', async (req, res) => {
     
     // Set viewport to exact template size
     await page.setViewport({
-      width: 800,
-      height: 480,
+      width: 480,
+      height: 800,
       deviceScaleFactor: 1 // Use 1 for exact size match
     });
 
@@ -483,8 +500,8 @@ app.get('/api/image', async (req, res) => {
       clip: {
         x: 0,
         y: 0,
-        width: 800,
-        height: 480
+        width: 480,
+        height: 800
       }
     });
 
@@ -523,8 +540,8 @@ app.post('/api/image', async (req, res) => {
 
     const page = await browser.newPage();
     await page.setViewport({
-      width: 800,
-      height: 480,
+      width: 480,
+      height: 800,
       deviceScaleFactor: 1
     });
 
@@ -541,8 +558,8 @@ app.post('/api/image', async (req, res) => {
       clip: {
         x: 0,
         y: 0,
-        width: 800,
-        height: 480
+        width: 480,
+        height: 800
       }
     });
 
